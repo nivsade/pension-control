@@ -63,9 +63,9 @@
 
   <template id="onboardingTpl">
     <section class="section narrow">
-      <div class="stepper"><span class="active">1</span><i></i><span>2</span><i></i><span>3</span></div>
+      <div class="stepper"><span class="active">1</span><i></i><span>2</span><i></i><span>3</span><i></i><span>4</span></div>
       <div class="panel">
-        <span class="eyebrow">שלב 1 מתוך 3</span>
+        <span class="eyebrow">שלב 1 מתוך 4</span>
         <h2>קצת עליך</h2>
         <p class="muted">המידע עוזר לנו להציג את הנתונים בהקשר הנכון. אפשר לשנות אותו בכל רגע.</p>
         <form id="profileForm" class="form-grid">
@@ -74,7 +74,43 @@
           <label>מצב משפחתי<select name="family"><option value="single">רווק/ה</option><option value="married">נשוי/אה</option><option value="children">משפחה עם ילדים</option></select></label>
           <label>סגנון השקעה<select name="risk"><option value="low">שמרני</option><option value="medium" selected>מאוזן</option><option value="high">מוכן/ה לתנודתיות גבוהה</option></select></label>
           <label class="wide">המטרה המרכזית<select name="goal"><option value="retirement">להגדיל חיסכון לפרישה</option><option value="fees">להוזיל דמי ניהול</option><option value="order">לעשות סדר בכל הקופות</option><option value="understand">להבין מה יש לי</option></select></label>
-          <div class="wide action-line"><button class="primary" type="submit">המשך לפרטי החיסכון</button></div>
+          <div class="wide action-line"><button class="primary" type="submit">המשך להרשאה וזיהוי</button></div>
+        </form>
+      </div>
+    </section>
+  </template>
+
+  <template id="verificationTpl">
+    <section class="section narrow">
+      <div class="stepper"><span class="done">✓</span><i class="done"></i><span class="active">2</span><i></i><span>3</span><i></i><span>4</span></div>
+      <div class="panel">
+        <span class="eyebrow">שלב 2 מתוך 4</span>
+        <h2>הרשאה וזיהוי</h2>
+        <p class="muted">הפרטים נועדו לאפשר בהמשך קבלת מידע פנסיוני מדויק בכפוף להסכמתך. בגרסת ה-MVP אין חיבור למסלקה או לגוף חיצוני והמידע אינו נשלח מהדפדפן.</p>
+        <div class="privacy-alert"><strong>חשוב:</strong> אל תזין כרגע פרטים אמיתיים של לקוחות בגרסה הציבורית ב-GitHub Pages. לפני שימוש מסחרי נחבר אחסון מאובטח והרשאות מתאימות.</div>
+        <form id="verificationForm" class="form-grid">
+          <label>שם מלא<input required name="fullName" autocomplete="name" placeholder="ישראל ישראלי" /></label>
+          <label>מספר תעודת זהות<input required name="idNumber" inputmode="numeric" maxlength="9" pattern="[0-9]{5,9}" placeholder="123456789" /></label>
+          <label>תאריך הנפקת תעודת זהות<input required name="idIssueDate" type="date" /></label>
+          <label>טלפון נייד<input name="phone" inputmode="tel" autocomplete="tel" placeholder="05X-XXXXXXX" /></label>
+          <label class="wide">דוא״ל<input name="email" type="email" autocomplete="email" placeholder="name@example.com" /></label>
+
+          <div class="wide signature-wrap">
+            <div class="signature-title"><div><strong>חתימה</strong><p>חתום/י עם העכבר או האצבע בתוך המסגרת.</p></div><button type="button" class="ghost" id="clearSignature">נקה חתימה</button></div>
+            <canvas id="signaturePad" width="900" height="260" aria-label="משטח חתימה"></canvas>
+            <input type="hidden" name="signatureProvided" />
+          </div>
+
+          <div class="wide consent-box">
+            <label class="checkbox"><input required type="checkbox" name="consentAccess" /> אני מאשר/ת להשתמש בפרטים שמסרתי לצורך קבלת, ריכוז והצגת המידע הפנסיוני והביטוחי שלי, בכפוף לדין ולהרשאות הנדרשות.</label>
+            <label class="checkbox"><input required type="checkbox" name="consentPrivacy" /> קראתי והבנתי כי המידע האישי והפיננסי הוא מידע רגיש וכי בגרסה מסחרית יוצגו מדיניות פרטיות, אבטחת מידע, מטרות השימוש ותקופת השמירה.</label>
+            <label class="checkbox"><input required type="checkbox" name="consentDisclaimer" /> ידוע לי שהמערכת מספקת תמונת מצב וכלי עזר בלבד ואינה מהווה ייעוץ פנסיוני, שיווק פנסיוני או ייעוץ השקעות.</label>
+          </div>
+          <div class="wide disclosure">
+            <strong>גילוי נאות מקוצר</strong>
+            <p>ההרשאה מיועדת לצורך איסוף והצגת מידע שהמשתמש ביקש לקבל. אין בעצם הצגת הנתונים המלצה לבצע ניוד, שינוי מסלול, ביטול מוצר, רכישת ביטוח או השקעה. לפני הפעלה מסחרית יש להתאים את נוסח ההסכמה, הפרטיות וההרשאה למסגרת המשפטית והרגולטורית החלה בפועל.</p>
+          </div>
+          <div class="wide action-line"><button type="button" class="ghost" data-go="onboarding">חזרה</button><button class="primary" type="submit">אישור והמשך</button></div>
         </form>
       </div>
     </section>
@@ -82,9 +118,9 @@
 
   <template id="dataTpl">
     <section class="section narrow">
-      <div class="stepper"><span class="done">✓</span><i class="done"></i><span class="active">2</span><i></i><span>3</span></div>
+      <div class="stepper"><span class="done">✓</span><i class="done"></i><span class="done">✓</span><i class="done"></i><span class="active">3</span><i></i><span>4</span></div>
       <div class="panel">
-        <span class="eyebrow">שלב 2 מתוך 3</span>
+        <span class="eyebrow">שלב 3 מתוך 4</span>
         <h2>החיסכון שלך</h2>
         <p class="muted">בגרסה הזו מזינים את הנתונים המרכזיים ידנית. אפשר גם לבחור קובץ כדי לדמות את חוויית העלאת הדוח.</p>
         <div class="upload-box" id="uploadBox">
@@ -111,7 +147,7 @@
           <label>יתרה נוספת<input name="otherBalance" type="number" min="0" step="100" placeholder="50500" /></label>
           <label>האם הקופה פעילה?<select name="otherActive"><option value="yes">כן</option><option value="no">לא</option><option value="unknown">לא יודע/ת</option></select></label>
           <label class="wide checkbox"><input type="checkbox" name="depositsOk" checked /> ההפקדות החודשיות האחרונות נראות לי תקינות</label>
-          <div class="wide action-line"><button type="button" class="ghost" data-go="onboarding">חזרה</button><button class="primary" type="submit">נתח את החיסכון שלי</button></div>
+          <div class="wide action-line"><button type="button" class="ghost" data-go="verification">חזרה</button><button class="primary" type="submit">נתח את החיסכון שלי</button></div>
         </form>
       </div>
     </section>

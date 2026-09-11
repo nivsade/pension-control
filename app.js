@@ -19,6 +19,7 @@ function render(view=(location.hash||'#home').slice(1)){
   app.innerHTML='';
   resetBtn.classList.toggle('hidden', !state.profile && !state.pension);
   if(view==='onboarding') renderOnboarding();
+  else if(view==='verification') renderVerification();
   else if(view==='data') renderData();
   else if(view==='dashboard' && state.pension) renderDashboard();
   else renderHome();
@@ -47,12 +48,53 @@ function renderOnboarding(){
     e.preventDefault();
     state.profile=Object.fromEntries(new FormData(form).entries());
     state.profile.age=Number(state.profile.age); state.profile.salary=Number(state.profile.salary);
-    save(); navigate('data');
+    save(); navigate('verification');
+  });
+}
+
+function renderVerification(){
+  if(!state.profile) return navigate('onboarding');
+  app.appendChild(tpl('verificationTpl'));
+  const form=document.getElementById('verificationForm');
+  const canvas=document.getElementById('signaturePad');
+  const ctx=canvas.getContext('2d');
+  let drawing=false, hasSignature=false;
+
+  if(state.verification){
+    ['fullName','idNumber','idIssueDate','phone','email'].forEach(k=>{ if(form.elements[k] && state.verification[k]) form.elements[k].value=state.verification[k]; });
+    ['consentAccess','consentPrivacy','consentDisclaimer'].forEach(k=>{ if(form.elements[k]) form.elements[k].checked=!!state.verification[k]; });
+  }
+
+  function canvasPoint(e){
+    const rect=canvas.getBoundingClientRect();
+    const src=e.touches?e.touches[0]:e;
+    return {x:(src.clientX-rect.left)*(canvas.width/rect.width), y:(src.clientY-rect.top)*(canvas.height/rect.height)};
+  }
+  function start(e){ e.preventDefault(); drawing=true; const p=canvasPoint(e); ctx.beginPath(); ctx.moveTo(p.x,p.y); }
+  function move(e){ if(!drawing)return; e.preventDefault(); const p=canvasPoint(e); ctx.lineWidth=4; ctx.lineCap='round'; ctx.lineJoin='round'; ctx.strokeStyle='#0f172a'; ctx.lineTo(p.x,p.y); ctx.stroke(); hasSignature=true; }
+  function end(e){ if(e)e.preventDefault(); drawing=false; }
+  ['mousedown','touchstart'].forEach(ev=>canvas.addEventListener(ev,start,{passive:false}));
+  ['mousemove','touchmove'].forEach(ev=>canvas.addEventListener(ev,move,{passive:false}));
+  ['mouseup','mouseleave','touchend','touchcancel'].forEach(ev=>canvas.addEventListener(ev,end,{passive:false}));
+  document.getElementById('clearSignature').addEventListener('click',()=>{ ctx.clearRect(0,0,canvas.width,canvas.height); hasSignature=false; });
+
+  form.addEventListener('submit',e=>{
+    e.preventDefault();
+    if(!hasSignature && !state.verification?.signatureProvided){ alert('יש להוסיף חתימה לפני שממשיכים'); return; }
+    const fd=new FormData(form);
+    const obj=Object.fromEntries(fd.entries());
+    obj.consentAccess=form.elements.consentAccess.checked;
+    obj.consentPrivacy=form.elements.consentPrivacy.checked;
+    obj.consentDisclaimer=form.elements.consentDisclaimer.checked;
+    obj.signatureProvided=true;
+    // במכוון לא שומרים את תמונת החתימה ב-localStorage בגרסת ה-MVP.
+    state.verification=obj; save(); navigate('data');
   });
 }
 
 function renderData(){
   if(!state.profile) return navigate('onboarding');
+  if(!state.verification) return navigate('verification');
   app.appendChild(tpl('dataTpl'));
   const form=document.getElementById('pensionForm');
   if(state.pension){ Object.entries(state.pension).forEach(([k,v])=>{ const el=form.elements[k]; if(!el)return; if(el.type==='checkbox')el.checked=!!v; else el.value=v; }); }
