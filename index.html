@@ -35,7 +35,7 @@
         <h1>בדיקת בריאות לחיסכון הפנסיוני שלך בתוך דקות</h1>
         <p class="lead">רכז פנסיה, גמל והשתלמות במקום אחד, קבל Pension Score ותבין מה כדאי לבדוק — בלי גיליונות אקסל ובלי מונחים מסובכים.</p>
         <div class="cta-row">
-          <button class="primary" data-go="onboarding">התחל בדיקה חינם</button>
+          <button class="primary" data-scroll-checks>בחר סוג בדיקה</button>
           <button class="secondary" data-demo>צפה בדוגמה</button>
         </div>
         <div class="trust-row">
@@ -54,6 +54,33 @@
       </div>
     </section>
 
+    <section class="section check-choice" id="checkTypes">
+      <div class="choice-head">
+        <span class="eyebrow">בחר איך להתחיל</span>
+        <h2>שתי דרכים לבדוק את התמונה הפנסיונית</h2>
+        <p class="muted">אפשר להתחיל באנונימיות מלאה, או לעבור למסלול בדיקת אמת הכולל זיהוי והרשאה.</p>
+      </div>
+      <div class="choice-grid">
+        <article class="choice-card anonymous">
+          <div class="choice-icon">A</div>
+          <span class="choice-badge">ללא פרטים מזהים</span>
+          <h3>בדיקה אנונימית</h3>
+          <p>לא מבקשים שם, ת״ז, טלפון או חתימה. מזינים רק נתונים כלליים ונתונים פנסיוניים ומקבלים Pension Score ותובנות ראשוניות.</p>
+          <ul><li>ללא הרשמה</li><li>ללא ת״ז</li><li>תוצאה מיידית</li></ul>
+          <button class="secondary full-btn" data-start-mode="anonymous">התחל בדיקה אנונימית</button>
+        </article>
+        <article class="choice-card real">
+          <div class="choice-icon">✓</div>
+          <span class="choice-badge solid">בדיקה על בסיס מידע אמיתי</span>
+          <h3>בדיקת אמת</h3>
+          <p>מסלול נפרד הכולל פרטים מזהים, תאריך הנפקת ת״ז, חתימה והסכמה. מיועד לתהליך שבו מנתחים מידע אמיתי של המשתמש.</p>
+          <ul><li>זיהוי והרשאה</li><li>אפשרות להעלאת דוח אמיתי</li><li>תמונה מדויקת יותר</li></ul>
+          <button class="primary full-btn" data-start-mode="real">התחל בדיקת אמת</button>
+          <small class="choice-note">בגרסת ה-MVP אין עדיין חיבור אוטומטי למסלקה; החיבור יתווסף בשלב ה-backend.</small>
+        </article>
+      </div>
+    </section>
+
     <section class="section three-cols">
       <article class="feature"><span>01</span><h3>מעלים מידע</h3><p>ממלאים מספר פרטים ומעלים דוח פנסיוני או מזינים את הנתונים ידנית.</p></article>
       <article class="feature"><span>02</span><h3>אנחנו מנתחים</h3><p>המערכת בודקת דמי ניהול, פיזור מוצרים, מסלולים וחריגות בסיסיות.</p></article>
@@ -65,7 +92,8 @@
     <section class="section narrow">
       <div class="stepper"><span class="active">1</span><i></i><span>2</span><i></i><span>3</span><i></i><span>4</span></div>
       <div class="panel">
-        <span class="eyebrow">שלב 1 מתוך 4</span>
+        <span class="eyebrow" id="onboardingStepLabel">שלב 1</span>
+        <div class="mode-pill" id="onboardingModePill"></div>
         <h2>קצת עליך</h2>
         <p class="muted">המידע עוזר לנו להציג את הנתונים בהקשר הנכון. אפשר לשנות אותו בכל רגע.</p>
         <form id="profileForm" class="form-grid">
@@ -74,7 +102,7 @@
           <label>מצב משפחתי<select name="family"><option value="single">רווק/ה</option><option value="married">נשוי/אה</option><option value="children">משפחה עם ילדים</option></select></label>
           <label>סגנון השקעה<select name="risk"><option value="low">שמרני</option><option value="medium" selected>מאוזן</option><option value="high">מוכן/ה לתנודתיות גבוהה</option></select></label>
           <label class="wide">המטרה המרכזית<select name="goal"><option value="retirement">להגדיל חיסכון לפרישה</option><option value="fees">להוזיל דמי ניהול</option><option value="order">לעשות סדר בכל הקופות</option><option value="understand">להבין מה יש לי</option></select></label>
-          <div class="wide action-line"><button class="primary" type="submit">המשך להרשאה וזיהוי</button></div>
+          <div class="wide action-line"><button class="primary" id="profileContinue" type="submit">המשך</button></div>
         </form>
       </div>
     </section>
@@ -84,10 +112,11 @@
     <section class="section narrow">
       <div class="stepper"><span class="done">✓</span><i class="done"></i><span class="active">2</span><i></i><span>3</span><i></i><span>4</span></div>
       <div class="panel">
-        <span class="eyebrow">שלב 2 מתוך 4</span>
+        <span class="eyebrow">בדיקת אמת · שלב 2 מתוך 4</span>
+        <div class="mode-pill real-pill">בדיקת אמת</div>
         <h2>הרשאה וזיהוי</h2>
         <p class="muted">הפרטים נועדו לאפשר בהמשך קבלת מידע פנסיוני מדויק בכפוף להסכמתך. בגרסת ה-MVP אין חיבור למסלקה או לגוף חיצוני והמידע אינו נשלח מהדפדפן.</p>
-        <div class="privacy-alert"><strong>חשוב:</strong> אל תזין כרגע פרטים אמיתיים של לקוחות בגרסה הציבורית ב-GitHub Pages. לפני שימוש מסחרי נחבר אחסון מאובטח והרשאות מתאימות.</div>
+        <div class="privacy-alert"><strong>חשוב:</strong> זהו עדיין MVP. לפני שימוש מסחרי בפרטים מזהים אמיתיים נחבר backend מאובטח, הצפנה, הרשאות ובקרת גישה. בשלב זה מומלץ להשתמש בנתוני בדיקה בלבד.</div>
         <form id="verificationForm" class="form-grid">
           <label>שם מלא<input required name="fullName" autocomplete="name" placeholder="ישראל ישראלי" /></label>
           <label>מספר תעודת זהות<input required name="idNumber" inputmode="numeric" maxlength="9" pattern="[0-9]{5,9}" placeholder="123456789" /></label>
@@ -120,9 +149,10 @@
     <section class="section narrow">
       <div class="stepper"><span class="done">✓</span><i class="done"></i><span class="done">✓</span><i class="done"></i><span class="active">3</span><i></i><span>4</span></div>
       <div class="panel">
-        <span class="eyebrow">שלב 3 מתוך 4</span>
+        <span class="eyebrow" id="dataStepLabel">שלב הנתונים</span>
+        <div class="mode-pill" id="dataModePill"></div>
         <h2>החיסכון שלך</h2>
-        <p class="muted">בגרסה הזו מזינים את הנתונים המרכזיים ידנית. אפשר גם לבחור קובץ כדי לדמות את חוויית העלאת הדוח.</p>
+        <p class="muted" id="dataIntro">מזינים את הנתונים המרכזיים ומקבלים תמונת מצב.</p>
         <div class="upload-box" id="uploadBox">
           <input id="reportFile" type="file" accept=".pdf,.csv,.xlsx,.xls,.xml,.txt" hidden />
           <button type="button" class="secondary" id="pickFile">בחר דוח פנסיוני</button>

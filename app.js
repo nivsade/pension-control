@@ -1,10 +1,15 @@
 const app = document.getElementById('app');
 const resetBtn = document.getElementById('resetBtn');
-const STORAGE_KEY = 'pension-control-v1';
+const STORAGE_KEY = 'pension-control-v4';
 
 const state = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
 
-function save(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+function save(){
+  // פרטים מזהים של מסלול בדיקת אמת אינם נשמרים ב-localStorage ב-MVP.
+  const safeState={...state};
+  delete safeState.verification;
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(safeState));
+}
 function money(n){ return new Intl.NumberFormat('he-IL',{style:'currency',currency:'ILS',maximumFractionDigits:0}).format(Number(n||0)); }
 function pct(n){ return `${Number(n||0).toFixed(2)}%`; }
 function tpl(id){ return document.getElementById(id).content.cloneNode(true); }
@@ -34,25 +39,42 @@ function bindNavigation(){
 function renderHome(){
   app.appendChild(tpl('homeTpl'));
   document.querySelector('[data-demo]').addEventListener('click',()=>{
+    state.mode='anonymous';
     state.profile={age:27,salary:17000,family:'single',risk:'medium',goal:'understand'};
     state.pension={pensionBalance:312000,pensionDeposit:3150,pensionAssetFee:.28,pensionDepositFee:1.6,pensionTrack:'general',studyBalance:121000,studyFee:.65,studyTrack:'sp500',otherBalance:50500,otherActive:'no',depositsOk:true};
     save(); navigate('dashboard');
   });
+  const scrollBtn=document.querySelector('[data-scroll-checks]');
+  if(scrollBtn) scrollBtn.addEventListener('click',()=>document.getElementById('checkTypes')?.scrollIntoView({behavior:'smooth'}));
+  document.querySelectorAll('[data-start-mode]').forEach(btn=>btn.addEventListener('click',()=>{
+    state.mode=btn.dataset.startMode;
+    state.profile=null; state.pension=null; state.verification=null;
+    save(); navigate('onboarding');
+  }));
 }
 
 function renderOnboarding(){
+  if(!state.mode) state.mode='anonymous';
   app.appendChild(tpl('onboardingTpl'));
+  const isReal=state.mode==='real';
+  const pill=document.getElementById('onboardingModePill');
+  const step=document.getElementById('onboardingStepLabel');
+  const continueBtn=document.getElementById('profileContinue');
+  if(pill){ pill.textContent=isReal?'בדיקת אמת':'בדיקה אנונימית'; pill.classList.add(isReal?'real-pill':'anon-pill'); }
+  if(step) step.textContent=isReal?'בדיקת אמת · שלב 1 מתוך 4':'בדיקה אנונימית · שלב 1 מתוך 3';
+  if(continueBtn) continueBtn.textContent=isReal?'המשך להרשאה וזיהוי':'המשך לנתונים הפנסיוניים';
   const form=document.getElementById('profileForm');
   if(state.profile){ Object.entries(state.profile).forEach(([k,v])=>{ if(form.elements[k]) form.elements[k].value=v; }); }
   form.addEventListener('submit',e=>{
     e.preventDefault();
     state.profile=Object.fromEntries(new FormData(form).entries());
     state.profile.age=Number(state.profile.age); state.profile.salary=Number(state.profile.salary);
-    save(); navigate('verification');
+    save(); navigate(isReal?'verification':'data');
   });
 }
 
 function renderVerification(){
+  if(state.mode!=='real') return navigate('onboarding');
   if(!state.profile) return navigate('onboarding');
   app.appendChild(tpl('verificationTpl'));
   const form=document.getElementById('verificationForm');
@@ -88,14 +110,21 @@ function renderVerification(){
     obj.consentDisclaimer=form.elements.consentDisclaimer.checked;
     obj.signatureProvided=true;
     // במכוון לא שומרים את תמונת החתימה ב-localStorage בגרסת ה-MVP.
-    state.verification=obj; save(); navigate('data');
+    state.verification=obj; navigate('data');
   });
 }
 
 function renderData(){
   if(!state.profile) return navigate('onboarding');
-  if(!state.verification) return navigate('verification');
+  if(state.mode==='real' && !state.verification) return navigate('verification');
   app.appendChild(tpl('dataTpl'));
+  const isReal=state.mode==='real';
+  const step=document.getElementById('dataStepLabel');
+  const pill=document.getElementById('dataModePill');
+  const intro=document.getElementById('dataIntro');
+  if(step) step.textContent=isReal?'בדיקת אמת · שלב 3 מתוך 4':'בדיקה אנונימית · שלב 2 מתוך 3';
+  if(pill){ pill.textContent=isReal?'בדיקת אמת':'בדיקה אנונימית'; pill.classList.add(isReal?'real-pill':'anon-pill'); }
+  if(intro) intro.textContent=isReal?'העלה דוח אמיתי והזן את הנתונים המרכזיים ממנו. בגרסת ה-MVP הניתוח מתבצע על הנתונים שהוזנו; חיבור אוטומטי למסלקה יתווסף ב-backend.':'אין צורך בשם, ת״ז או פרטי קשר. הזן את הנתונים שברשותך כדי לקבל הערכה ראשונית.';
   const form=document.getElementById('pensionForm');
   if(state.pension){ Object.entries(state.pension).forEach(([k,v])=>{ const el=form.elements[k]; if(!el)return; if(el.type==='checkbox')el.checked=!!v; else el.value=v; }); }
   document.getElementById('pickFile').addEventListener('click',()=>document.getElementById('reportFile').click());
@@ -149,9 +178,10 @@ function renderDashboard(){
   const container=document.getElementById('dashboardContent');
   const productCount=[p.pensionBalance,p.studyBalance,p.otherBalance].filter(x=>Number(x)>0).length;
   const issueCount=r.insights.filter(x=>x.level!=='good').length;
+  const isReal=state.mode==='real';
   container.innerHTML=`
     <div class="dashboard-head">
-      <div><span class="eyebrow">התמונה הפנסיונית שלך</span><h1>שלום, הנה המצב שלך</h1><p>הציון מחושב לפי הנתונים שהזנת ומהווה אינדיקציה ראשונית בלבד.</p></div>
+      <div><span class="dashboard-mode">${isReal?'בדיקת אמת':'בדיקה אנונימית'}</span><br><span class="eyebrow">התמונה הפנסיונית שלך</span><h1>${isReal?'תמונת המצב שלך':'ההערכה האנונימית שלך'}</h1><p>${isReal?'התוצאה מבוססת על הנתונים האמיתיים שהוזנו מהדוח.':'הציון מבוסס רק על הנתונים שהזנת, ללא פרטים מזהים.'}</p></div>
       <div class="cta-row"><button class="secondary" id="editData">עריכת נתונים</button></div>
     </div>
     <div class="grid-score">
@@ -175,7 +205,7 @@ function renderDashboard(){
     <section class="insights"><h2>מה כדאי לבדוק</h2><div class="insight-list">
       ${r.insights.map((i,idx)=>`<article class="insight-card ${i.level}"><header><span class="insight-icon">${i.level==='good'?'✓':i.level==='warn'?'!':'×'}</span><div><small>#${idx+1}</small><h3>${i.title}</h3></div></header><p>${i.text}</p></article>`).join('')}
     </div></section>
-    <div class="disclaimer"><strong>חשוב:</strong> המערכת מציגה ניתוח ראשוני על בסיס הנתונים שהמשתמש הזין. אין כאן המלצה לבצע ניוד, שינוי מסלול, ביטול מוצר או רכישת מוצר פיננסי. בגרסה מסחרית יש לבצע בדיקת רגולציה, פרטיות ואבטחת מידע לפני שימוש בנתונים פנסיוניים אמיתיים.</div>
+    <div class="disclaimer"><strong>חשוב:</strong> ${isReal?'בדיקת האמת ב-MVP מבוססת על מידע אמיתי שהוזן/הועלה, אך עדיין אין משיכת נתונים אוטומטית מהמסלקה.':'הבדיקה האנונימית היא הערכה ראשונית ואינה מאמתת את הנתונים מול גוף חיצוני.'} אין כאן המלצה לבצע ניוד, שינוי מסלול, ביטול מוצר או רכישת מוצר פיננסי.</div>
   `;
   document.getElementById('editData').addEventListener('click',()=>navigate('data'));
 }
