@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <meta name="theme-color" content="#0f172a" />
+  <meta name="description" content="בדיקת בריאות לחיסכון הפנסיוני שלך" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="stylesheet" href="styles.css" />
+  <title>Pension Control</title>
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <button class="brand" data-go="home" aria-label="דף הבית">
+        <span class="brand-mark">PC</span>
+        <span>Pension Control</span>
+      </button>
+      <nav class="top-actions">
+        <button class="ghost hidden" id="resetBtn">איפוס נתונים</button>
+      </nav>
+    </header>
+
+    <main id="app" tabindex="-1"></main>
+
+    <footer>
+      <p>גרסת MVP להמחשה בלבד. המידע במערכת אינו ייעוץ פנסיוני, שיווק פנסיוני או ייעוץ השקעות.</p>
+    </footer>
+  </div>
+
+  <template id="homeTpl">
+    <section class="hero section">
+      <div class="hero-copy">
+        <span class="eyebrow">הכסף שלך. סוף סוף ברור.</span>
+        <h1>בדיקת בריאות לחיסכון הפנסיוני שלך בתוך דקות</h1>
+        <p class="lead">רכז פנסיה, גמל והשתלמות במקום אחד, קבל Pension Score ותבין מה כדאי לבדוק — בלי גיליונות אקסל ובלי מונחים מסובכים.</p>
+        <div class="cta-row">
+          <button class="primary" data-go="onboarding">התחל בדיקה חינם</button>
+          <button class="secondary" data-demo>צפה בדוגמה</button>
+        </div>
+        <div class="trust-row">
+          <span>✓ תמונה מרוכזת</span><span>✓ ניתוח דמי ניהול</span><span>✓ תובנות מותאמות</span>
+        </div>
+      </div>
+      <div class="hero-card">
+        <div class="mini-score">
+          <div class="score-ring" style="--score:74"><span>74</span><small>/100</small></div>
+          <div><strong>Pension Score</strong><p>מצב טוב, יש מקום לשיפור</p></div>
+        </div>
+        <div class="mini-stat"><span>חיסכון כולל</span><strong>₪483,500</strong></div>
+        <div class="mini-insight bad">דמי הניהול בפנסיה גבוהים יחסית</div>
+        <div class="mini-insight warn">נמצאה קופה לא פעילה</div>
+        <div class="mini-insight good">ההפקדות השוטפות תקינות</div>
+      </div>
+    </section>
+
+    <section class="section three-cols">
+      <article class="feature"><span>01</span><h3>מעלים מידע</h3><p>ממלאים מספר פרטים ומעלים דוח פנסיוני או מזינים את הנתונים ידנית.</p></article>
+      <article class="feature"><span>02</span><h3>אנחנו מנתחים</h3><p>המערכת בודקת דמי ניהול, פיזור מוצרים, מסלולים וחריגות בסיסיות.</p></article>
+      <article class="feature"><span>03</span><h3>מקבלים תמונה ברורה</h3><p>ציון אחד, נתונים מרכזיים ורשימת דברים שכדאי לבדוק לפי סדר חשיבות.</p></article>
+    </section>
+  </template>
+
+  <template id="onboardingTpl">
+    <section class="section narrow">
+      <div class="stepper"><span class="active">1</span><i></i><span>2</span><i></i><span>3</span></div>
+      <div class="panel">
+        <span class="eyebrow">שלב 1 מתוך 3</span>
+        <h2>קצת עליך</h2>
+        <p class="muted">המידע עוזר לנו להציג את הנתונים בהקשר הנכון. אפשר לשנות אותו בכל רגע.</p>
+        <form id="profileForm" class="form-grid">
+          <label>גיל<input required name="age" inputmode="numeric" type="number" min="18" max="80" placeholder="27" /></label>
+          <label>שכר חודשי ברוטו<input required name="salary" inputmode="decimal" type="number" min="0" step="100" placeholder="17000" /></label>
+          <label>מצב משפחתי<select name="family"><option value="single">רווק/ה</option><option value="married">נשוי/אה</option><option value="children">משפחה עם ילדים</option></select></label>
+          <label>סגנון השקעה<select name="risk"><option value="low">שמרני</option><option value="medium" selected>מאוזן</option><option value="high">מוכן/ה לתנודתיות גבוהה</option></select></label>
+          <label class="wide">המטרה המרכזית<select name="goal"><option value="retirement">להגדיל חיסכון לפרישה</option><option value="fees">להוזיל דמי ניהול</option><option value="order">לעשות סדר בכל הקופות</option><option value="understand">להבין מה יש לי</option></select></label>
+          <div class="wide action-line"><button class="primary" type="submit">המשך לפרטי החיסכון</button></div>
+        </form>
+      </div>
+    </section>
+  </template>
+
+  <template id="dataTpl">
+    <section class="section narrow">
+      <div class="stepper"><span class="done">✓</span><i class="done"></i><span class="active">2</span><i></i><span>3</span></div>
+      <div class="panel">
+        <span class="eyebrow">שלב 2 מתוך 3</span>
+        <h2>החיסכון שלך</h2>
+        <p class="muted">בגרסה הזו מזינים את הנתונים המרכזיים ידנית. אפשר גם לבחור קובץ כדי לדמות את חוויית העלאת הדוח.</p>
+        <div class="upload-box" id="uploadBox">
+          <input id="reportFile" type="file" accept=".pdf,.csv,.xlsx,.xls,.xml,.txt" hidden />
+          <button type="button" class="secondary" id="pickFile">בחר דוח פנסיוני</button>
+          <p id="fileName">PDF / Excel / XML — עד 10MB</p>
+        </div>
+        <form id="pensionForm" class="form-grid">
+          <div class="wide product-title"><h3>קרן פנסיה</h3><span>מוצר מרכזי</span></div>
+          <label>יתרה<input required name="pensionBalance" type="number" min="0" step="100" placeholder="312000" /></label>
+          <label>הפקדה חודשית<input required name="pensionDeposit" type="number" min="0" step="10" placeholder="3150" /></label>
+          <label>דמי ניהול מצבירה (%)<input required name="pensionAssetFee" type="number" min="0" max="2" step="0.01" placeholder="0.18" /></label>
+          <label>דמי ניהול מהפקדה (%)<input required name="pensionDepositFee" type="number" min="0" max="8" step="0.01" placeholder="1.10" /></label>
+          <label class="wide">מסלול<select name="pensionTrack"><option value="general">כללי / תלוי גיל</option><option value="stocks">מניות</option><option value="sp500">S&P 500</option><option value="bonds">אג"ח / סולידי</option></select></label>
+
+          <div class="wide divider"></div>
+          <div class="wide product-title"><h3>קרן השתלמות</h3><span>אופציונלי</span></div>
+          <label>יתרה<input name="studyBalance" type="number" min="0" step="100" placeholder="121000" /></label>
+          <label>דמי ניהול מצבירה (%)<input name="studyFee" type="number" min="0" max="2" step="0.01" placeholder="0.65" /></label>
+          <label class="wide">מסלול<select name="studyTrack"><option value="none">אין / לא יודע</option><option value="general">כללי</option><option value="stocks">מניות</option><option value="sp500">S&P 500</option><option value="bonds">אג"ח / סולידי</option></select></label>
+
+          <div class="wide divider"></div>
+          <div class="wide product-title"><h3>קופות נוספות</h3><span>גמל / קופה לא פעילה</span></div>
+          <label>יתרה נוספת<input name="otherBalance" type="number" min="0" step="100" placeholder="50500" /></label>
+          <label>האם הקופה פעילה?<select name="otherActive"><option value="yes">כן</option><option value="no">לא</option><option value="unknown">לא יודע/ת</option></select></label>
+          <label class="wide checkbox"><input type="checkbox" name="depositsOk" checked /> ההפקדות החודשיות האחרונות נראות לי תקינות</label>
+          <div class="wide action-line"><button type="button" class="ghost" data-go="onboarding">חזרה</button><button class="primary" type="submit">נתח את החיסכון שלי</button></div>
+        </form>
+      </div>
+    </section>
+  </template>
+
+  <template id="dashboardTpl">
+    <section class="section dashboard" id="dashboardContent"></section>
+  </template>
+</body>
+<script src="app.js"></script>
+</html>
