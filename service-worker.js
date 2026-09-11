@@ -1,5 +1,5 @@
-const CACHE='pension-control-v4';
-const ASSETS=['./','./index.html','./styles.css','./app.js','./manifest.webmanifest'];
+const CACHE='pension-control-v5';
+const ASSETS=['./','./index.html','./styles.css','./app.js','./backend.js','./config.js','./manifest.webmanifest'];
 
 self.addEventListener('install', event => {
   self.skipWaiting();
@@ -17,25 +17,10 @@ self.addEventListener('activate', event => {
 self.addEventListener('fetch', event => {
   const request = event.request;
   if (request.mode === 'navigate') {
-    event.respondWith(
-      fetch(request)
-        .then(response => {
-          const copy = response.clone();
-          caches.open(CACHE).then(cache => cache.put('./index.html', copy));
-          return response;
-        })
-        .catch(() => caches.match('./index.html'))
-    );
+    event.respondWith(fetch(request).catch(() => caches.match('./index.html')));
     return;
   }
-
-  event.respondWith(
-    fetch(request)
-      .then(response => {
-        const copy = response.clone();
-        caches.open(CACHE).then(cache => cache.put(request, copy));
-        return response;
-      })
-      .catch(() => caches.match(request))
-  );
+  event.respondWith(fetch(request).then(response => {
+    const copy=response.clone(); caches.open(CACHE).then(cache=>cache.put(request,copy)); return response;
+  }).catch(()=>caches.match(request)));
 });

@@ -1,6 +1,6 @@
 const app = document.getElementById('app');
 const resetBtn = document.getElementById('resetBtn');
-const STORAGE_KEY = 'pension-control-v4';
+const STORAGE_KEY = 'pension-control-v5';
 
 const state = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
 
@@ -78,6 +78,11 @@ function renderVerification(){
   if(!state.profile) return navigate('onboarding');
   app.appendChild(tpl('verificationTpl'));
   const form=document.getElementById('verificationForm');
+  const panel=form.closest('.panel');
+  const backendBox=document.createElement('div');
+  backendBox.className='backend-status '+(window.PensionBackend?.configured?.()?'ok':'');
+  backendBox.textContent=window.PensionBackend?.configured?.() ? '✓ המערכת מחוברת ל-backend. הבקשה תישמר ותופיע במערכת הניהול.' : 'מצב דמו: עדיין לא הוגדר חיבור ל-Supabase ולכן הפרטים לא יישלחו אליך.';
+  panel.insertBefore(backendBox, form);
   const canvas=document.getElementById('signaturePad');
   const ctx=canvas.getContext('2d');
   let drawing=false, hasSignature=false;
@@ -109,8 +114,19 @@ function renderVerification(){
     obj.consentPrivacy=form.elements.consentPrivacy.checked;
     obj.consentDisclaimer=form.elements.consentDisclaimer.checked;
     obj.signatureProvided=true;
-    // במכוון לא שומרים את תמונת החתימה ב-localStorage בגרסת ה-MVP.
-    state.verification=obj; navigate('data');
+    obj.signatureDataUrl=canvas.toDataURL('image/png');
+    state.verification=obj;
+    const backendReady=window.PensionBackend?.configured?.();
+    if(!backendReady){
+      alert('המערכת עדיין לא מחוברת ל-Supabase. ניתן להמשיך כדמו, אך הפרטים לא יישלחו אליך עד להשלמת config.js וה-Edge Function.');
+      navigate('data');
+      return;
+    }
+    const submitBtn=form.querySelector('button[type=submit]');
+    submitBtn.disabled=true; submitBtn.textContent='שולח בקשה מאובטחת...';
+    window.PensionBackend.callFunction({action:'submit_identity',profile:state.profile,verification:obj,signatureDataUrl:obj.signatureDataUrl})
+      .then(res=>{ state.requestId=res.requestId; navigate('data'); })
+      .catch(err=>{ console.error(err); alert('שליחת הבקשה נכשלה. נסה שוב או בדוק את חיבור ה-backend.'); submitBtn.disabled=false; submitBtn.textContent='אישור והמשך'; });
   });
 }
 
@@ -139,7 +155,14 @@ function renderData(){
     const fd=new FormData(form); const obj=Object.fromEntries(fd.entries());
     ['pensionBalance','pensionDeposit','pensionAssetFee','pensionDepositFee','studyBalance','studyFee','otherBalance'].forEach(k=>obj[k]=Number(obj[k]||0));
     obj.depositsOk=form.elements.depositsOk.checked;
-    state.pension=obj; save(); navigate('dashboard');
+    state.pension=obj; save();
+    if(isReal && state.requestId && window.PensionBackend?.configured?.()){
+      const submitBtn=form.querySelector('button[type=submit]');
+      submitBtn.disabled=true; submitBtn.textContent='שומר נתונים...';
+      window.PensionBackend.callFunction({action:'submit_pension',requestId:state.requestId,pension:obj})
+        .then(()=>navigate('dashboard'))
+        .catch(err=>{console.error(err); alert('הפרטים המזהים נשמרו, אך שמירת הנתונים הפנסיוניים נכשלה. אפשר לנסות שוב.'); submitBtn.disabled=false; submitBtn.textContent='נתח את החיסכון שלי';});
+    } else navigate('dashboard');
   });
 }
 

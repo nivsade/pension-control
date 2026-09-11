@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Pension Control · Admin</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header class="topbar"><a class="brand" href="./"><span class="brand-mark">PC</span><span>Pension Control</span></a><div class="top-actions"><button class="ghost hidden" id="logoutBtn">יציאה</button></div></header>
+<main class="admin-shell">
+  <section id="loginView" class="admin-login admin-card">
+    <span class="eyebrow">Admin</span><h1>כניסת מנהל</h1><p class="muted">הגישה מיועדת למשתמש שהוגדר כמנהל ב-Supabase.</p>
+    <form id="loginForm" class="form-grid"><label class="wide">אימייל<input name="email" type="email" required autocomplete="username"></label><label class="wide">סיסמה<input name="password" type="password" required autocomplete="current-password"></label><div class="wide action-line"><button class="primary" type="submit">כניסה</button></div></form>
+    <div id="loginMsg" class="backend-status hidden"></div>
+  </section>
+  <section id="adminView" class="hidden">
+    <div class="admin-toolbar"><div><span class="eyebrow">ניהול בדיקות אמת</span><h1>בקשות לקוחות</h1></div><button class="secondary" id="refreshBtn">רענן</button></div>
+    <div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>תאריך</th><th>לקוח</th><th>טלפון</th><th>אימייל</th><th>סטטוס</th><th>פעולה</th></tr></thead><tbody id="requestsBody"></tbody></table></div>
+  </section>
+</main>
+<div class="admin-modal" id="detailModal"><div class="admin-modal-card"><div class="admin-modal-head"><h2>פרטי בקשה</h2><button class="ghost" id="closeModal">סגור</button></div><div id="detailContent"></div></div></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="config.js"></script><script src="admin.js"></script>
+</body></html>
