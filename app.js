@@ -199,39 +199,112 @@ function renderDashboard(){
   const p=state.pension, pr=state.profile||{};
   const r=scoreEngine(pr,p); const [label,desc]=scoreLabel(r.score);
   const container=document.getElementById('dashboardContent');
-  const productCount=[p.pensionBalance,p.studyBalance,p.otherBalance].filter(x=>Number(x)>0).length;
   const issueCount=r.insights.filter(x=>x.level!=='good').length;
   const isReal=state.mode==='real';
+  const total=Math.max(1,r.savings);
+  const pensionPct=Math.round((Number(p.pensionBalance||0)/total)*100);
+  const studyPct=Math.round((Number(p.studyBalance||0)/total)*100);
+  const otherPct=Math.max(0,100-pensionPct-studyPct);
+  const firstName=(state.verification?.fullName||'').trim().split(/\s+/)[0]||'';
+  const hello=firstName?`היי ${firstName}, `:'';
+  const topIssues=r.insights.filter(x=>x.level!=='good').slice(0,3);
+  const goodCount=r.insights.filter(x=>x.level==='good').length;
+
   container.innerHTML=`
-    <div class="dashboard-head">
-      <div><span class="dashboard-mode">${isReal?'בדיקת אמת':'בדיקה אנונימית'}</span><br><span class="eyebrow">התמונה הפנסיונית שלך</span><h1>${isReal?'תמונת המצב שלך':'ההערכה האנונימית שלך'}</h1><p>${isReal?'התוצאה מבוססת על הנתונים האמיתיים שהוזנו מהדוח.':'הציון מבוסס רק על הנתונים שהזנת, ללא פרטים מזהים.'}</p></div>
-      <div class="cta-row"><button class="secondary" id="editData">עריכת נתונים</button></div>
+    <div class="client-dashboard-shell">
+      <aside class="client-sidebar" aria-label="ניווט בדשבורד">
+        <div class="client-sidebar-brand"><span class="sidebar-logo">PC</span><span>Pension Control</span></div>
+        <nav class="client-nav">
+          <button class="client-nav-item active" data-dash-target="overview"><span class="nav-icon">⌂</span><span>מבט מהיר</span></button>
+          <button class="client-nav-item" data-dash-target="savings"><span class="nav-icon">◔</span><span>החסכונות שלך</span></button>
+          <button class="client-nav-item" data-dash-target="recommendations"><span class="nav-icon">✦</span><span>המלצות לשיפור</span></button>
+          <button class="client-nav-item" id="editDataSide"><span class="nav-icon">✎</span><span>עריכת נתונים</span></button>
+          <button class="client-nav-item" id="newCheckSide"><span class="nav-icon">＋</span><span>בדיקה חדשה</span></button>
+        </nav>
+        <div class="sidebar-help"><span class="sidebar-help-icon">?</span><div><strong>משהו לא ברור?</strong><small>המערכת מציגה תמונת מצב ראשונית בלבד.</small></div></div>
+      </aside>
+
+      <div class="client-main">
+        <header class="client-dashboard-head" id="overview">
+          <div>
+            <span class="dashboard-mode ${isReal?'real-pill':'anon-pill'}">${isReal?'בדיקת אמת':'בדיקה אנונימית'}</span>
+            <h1>${hello}הנה התמונה הפנסיונית שלך</h1>
+            <p>${isReal?'ריכזנו את הנתונים שהזנת והדגשנו את הנקודות שכדאי לבדוק.':'זו הערכה ראשונית המבוססת על הנתונים שהזנת בלבד.'}</p>
+          </div>
+          <button class="secondary soft-btn" id="editData">עריכת נתונים</button>
+        </header>
+
+        <div class="dashboard-highlight-row">
+          <article class="welcome-score-card">
+            <div class="welcome-score-top"><div><span class="card-kicker">Pension Score</span><h2>${label}</h2></div><span class="score-badge">${r.score}<small>/100</small></span></div>
+            <p>${desc}</p>
+            <div class="friendly-meter" aria-label="ציון ${r.score} מתוך 100"><span style="width:${r.score}%"></span></div>
+            <div class="meter-labels"><span>כדאי לשפר</span><span>שווה בדיקה</span><span>נראה טוב</span></div>
+          </article>
+
+          <article class="total-savings-card" id="savings">
+            <div class="savings-chart-wrap">
+              <div class="savings-donut" style="--pension:${pensionPct};--study:${studyPct};--other:${otherPct}">
+                <div class="savings-donut-center"><small>סה״כ חיסכון</small><strong>${money(r.savings)}</strong></div>
+              </div>
+            </div>
+            <div class="savings-legend">
+              <h3>החסכונות שלך</h3>
+              <div><span class="legend-dot pension-dot"></span><span>קרן פנסיה</span><strong>${money(p.pensionBalance)}</strong></div>
+              <div><span class="legend-dot study-dot"></span><span>קרן השתלמות</span><strong>${money(p.studyBalance)}</strong></div>
+              <div><span class="legend-dot other-dot"></span><span>קופות נוספות</span><strong>${money(p.otherBalance)}</strong></div>
+            </div>
+          </article>
+        </div>
+
+        <div class="quick-stats-row">
+          <article class="quick-stat-card"><span class="quick-stat-icon">₪</span><div><small>הפקדה שנתית משוערת</small><strong>${money(r.annualDeposit)}</strong></div></article>
+          <article class="quick-stat-card"><span class="quick-stat-icon">!</span><div><small>נקודות שכדאי לבדוק</small><strong>${issueCount}</strong></div></article>
+          <article class="quick-stat-card"><span class="quick-stat-icon">✓</span><div><small>מדדים שנראים תקינים</small><strong>${goodCount}</strong></div></article>
+        </div>
+
+        <section class="recommendation-section" id="recommendations">
+          <div class="section-title-row"><div><span class="card-kicker">הצעד הבא שלך</span><h2>המלצות לשיפור</h2></div><span class="recommendation-count">${issueCount} נקודות לבדיקה</span></div>
+          <div class="recommendation-layout">
+            <article class="recommendation-meter-card">
+              <h3>כמה מקום יש לשיפור?</h3>
+              <div class="recommendation-scale"><span style="width:${Math.min(100,Math.max(8,100-r.score))}%"></span></div>
+              <div class="recommendation-scale-labels"><span>נראה טוב</span><span>שווה בדיקה</span><span>ניתן לשפר</span></div>
+              <div class="recommendation-summary"><strong>${issueCount===0?'התמונה נראית טובה':'יש כמה דברים ששווה לבדוק'}</strong><p>${issueCount===0?'לא זוהו כרגע נקודות משמעותיות לפי הנתונים שהזנת.':'אפשר לעבור על הנקודות מטה לפי סדר עדיפות, בלי לבצע שינוי אוטומטי באף מוצר.'}</p></div>
+            </article>
+            <div class="recommendation-list-modern">
+              ${(topIssues.length?topIssues:[{level:'good',title:'לא זוהו כרגע חריגות משמעותיות',text:'מומלץ להמשיך לבצע בדיקה תקופתית ולוודא שהנתונים מעודכנים.'}]).map((i,idx)=>`
+                <article class="recommendation-item ${i.level}">
+                  <span class="recommendation-num">${String(idx+1).padStart(2,'0')}</span>
+                  <div><h3>${i.title}</h3><p>${i.text}</p></div>
+                  <span class="recommendation-arrow">←</span>
+                </article>`).join('')}
+            </div>
+          </div>
+        </section>
+
+        <section class="all-insights-section">
+          <div class="section-title-row"><div><span class="card-kicker">פירוט מלא</span><h2>כל התובנות</h2></div></div>
+          <div class="insight-list modern-insights">
+            ${r.insights.map((i,idx)=>`<article class="insight-card ${i.level}"><header><span class="insight-icon">${i.level==='good'?'✓':i.level==='warn'?'!':'×'}</span><div><small>#${idx+1}</small><h3>${i.title}</h3></div></header><p>${i.text}</p></article>`).join('')}
+          </div>
+        </section>
+
+        <div class="disclaimer modern-disclaimer"><strong>חשוב:</strong> ${isReal?'בדיקת האמת ב-MVP מבוססת על מידע אמיתי שהוזן/הועלה, אך עדיין אין משיכת נתונים אוטומטית מהמסלקה.':'הבדיקה האנונימית היא הערכה ראשונית ואינה מאמתת את הנתונים מול גוף חיצוני.'} אין כאן המלצה לבצע ניוד, שינוי מסלול, ביטול מוצר או רכישת מוצר פיננסי.</div>
+      </div>
     </div>
-    <div class="grid-score">
-      <article class="metric-card">
-        <h3>Pension Score</h3>
-        <div class="score-large"><div class="score-ring" style="--score:${r.score}"><span>${r.score}</span><small>/100</small></div><div><h2>${label}</h2><p class="muted">${desc}</p></div></div>
-      </article>
-      <article class="metric-card">
-        <h3>סיכום החיסכון</h3>
-        <div class="metric-row"><span>פנסיה</span><strong>${money(p.pensionBalance)}</strong></div>
-        <div class="metric-row"><span>קרן השתלמות</span><strong>${money(p.studyBalance)}</strong></div>
-        <div class="metric-row"><span>קופות נוספות</span><strong>${money(p.otherBalance)}</strong></div>
-        <div class="metric-row"><span>סה"כ</span><strong>${money(r.savings)}</strong></div>
-      </article>
-    </div>
-    <div class="metrics-3">
-      <div class="small-metric"><span>חיסכון כולל</span><strong>${money(r.savings)}</strong></div>
-      <div class="small-metric"><span>הפקדה שנתית משוערת</span><strong>${money(r.annualDeposit)}</strong></div>
-      <div class="small-metric"><span>נקודות לבדיקה</span><strong>${issueCount}</strong></div>
-    </div>
-    <section class="insights"><h2>מה כדאי לבדוק</h2><div class="insight-list">
-      ${r.insights.map((i,idx)=>`<article class="insight-card ${i.level}"><header><span class="insight-icon">${i.level==='good'?'✓':i.level==='warn'?'!':'×'}</span><div><small>#${idx+1}</small><h3>${i.title}</h3></div></header><p>${i.text}</p></article>`).join('')}
-    </div></section>
-    <div class="disclaimer"><strong>חשוב:</strong> ${isReal?'בדיקת האמת ב-MVP מבוססת על מידע אמיתי שהוזן/הועלה, אך עדיין אין משיכת נתונים אוטומטית מהמסלקה.':'הבדיקה האנונימית היא הערכה ראשונית ואינה מאמתת את הנתונים מול גוף חיצוני.'} אין כאן המלצה לבצע ניוד, שינוי מסלול, ביטול מוצר או רכישת מוצר פיננסי.</div>
   `;
-  document.getElementById('editData').addEventListener('click',()=>navigate('data'));
+
+  document.getElementById('editData')?.addEventListener('click',()=>navigate('data'));
+  document.getElementById('editDataSide')?.addEventListener('click',()=>navigate('data'));
+  document.getElementById('newCheckSide')?.addEventListener('click',()=>navigate('home'));
+  document.querySelectorAll('[data-dash-target]').forEach(btn=>btn.addEventListener('click',()=>{
+    document.querySelectorAll('.client-nav-item').forEach(x=>x.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById(btn.dataset.dashTarget)?.scrollIntoView({behavior:'smooth',block:'start'});
+  }));
 }
+
 
 resetBtn.addEventListener('click',()=>{
   if(confirm('למחוק את כל הנתונים המקומיים ולהתחיל מחדש?')){ localStorage.removeItem(STORAGE_KEY); Object.keys(state).forEach(k=>delete state[k]); navigate('home'); }
