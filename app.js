@@ -8,6 +8,8 @@ function save(){
   // פרטים מזהים של מסלול בדיקת אמת אינם נשמרים ב-localStorage ב-MVP.
   const safeState={...state};
   delete safeState.verification;
+  // דוח ביטוחי אמיתי אינו נשמר ב-localStorage בגרסת ה-MVP.
+  delete safeState.insurance;
   localStorage.setItem(STORAGE_KEY, JSON.stringify(safeState));
 }
 function money(n){ return new Intl.NumberFormat('he-IL',{style:'currency',currency:'ILS',maximumFractionDigits:0}).format(Number(n||0)); }
@@ -22,11 +24,11 @@ function navigate(view){
 
 function render(view=(location.hash||'#home').slice(1)){
   app.innerHTML='';
-  resetBtn.classList.toggle('hidden', !state.profile && !state.pension);
+  resetBtn.classList.toggle('hidden', !state.profile && !state.pension && !state.insurance);
   if(view==='onboarding') renderOnboarding();
   else if(view==='verification') renderVerification();
   else if(view==='data') renderData();
-  else if(view==='dashboard' && state.pension) renderDashboard();
+  else if(view==='dashboard' && (state.pension || state.insurance)) renderDashboard();
   else renderHome();
   bindNavigation();
   app.focus({preventScroll:true});
@@ -48,7 +50,7 @@ function renderHome(){
   if(scrollBtn) scrollBtn.addEventListener('click',()=>document.getElementById('checkTypes')?.scrollIntoView({behavior:'smooth'}));
   document.querySelectorAll('[data-start-mode]').forEach(btn=>btn.addEventListener('click',()=>{
     state.mode=btn.dataset.startMode;
-    state.profile=null; state.pension=null; state.verification=null;
+    state.profile=null; state.pension=null; state.insurance=null; state.reportType=null; state.verification=null;
     save(); navigate('onboarding');
   }));
 }
@@ -144,18 +146,33 @@ function renderData(){
   const form=document.getElementById('pensionForm');
   if(state.pension){ Object.entries(state.pension).forEach(([k,v])=>{ const el=form.elements[k]; if(!el)return; if(el.type==='checkbox')el.checked=!!v; else el.value=v; }); }
   document.getElementById('pickFile').addEventListener('click',()=>document.getElementById('reportFile').click());
-  document.getElementById('reportFile').addEventListener('change',e=>{
+  document.getElementById('reportFile').addEventListener('change',async e=>{
     const file=e.target.files[0];
     if(!file)return;
     if(file.size>10*1024*1024){ alert('הקובץ גדול מ-10MB'); e.target.value=''; return; }
-    document.getElementById('fileName').textContent=`נבחר: ${file.name} — ב-MVP הנתונים עדיין מוזנים ידנית`;
+    const status=document.getElementById('reportParseStatus');
+    const preview=document.getElementById('insurancePreview');
+    document.getElementById('fileName').textContent=`נבחר: ${file.name}`;
+    status.className='report-parse-status'; status.textContent='קורא את הדוח ומרכז את הפוליסות...';
+    preview.classList.add('hidden');
+    try{
+      const analysis=await parseInsuranceWorkbook(file);
+      state.insurance=analysis; state.reportType='insurance';
+      status.textContent=`✓ זוהה דוח הר הביטוח: ${analysis.rowsCount} שורות, ${analysis.policyCount} פוליסות מרכזיות.`;
+      preview.innerHTML=insurancePreviewHtml(analysis); preview.classList.remove('hidden');
+      preview.querySelector('[data-analyze-insurance]')?.addEventListener('click',()=>navigate('dashboard'));
+    }catch(err){
+      console.error(err); state.insurance=null;
+      status.className='report-parse-status error';
+      status.textContent='לא הצלחנו לזהות דוח הר הביטוח בקובץ. ודא שזה Excel שהופק מאתר הר הביטוח ושכותרות העמודות נשמרו.';
+    }
   });
   form.addEventListener('submit',e=>{
     e.preventDefault();
     const fd=new FormData(form); const obj=Object.fromEntries(fd.entries());
     ['pensionBalance','pensionDeposit','pensionAssetFee','pensionDepositFee','studyBalance','studyFee','otherBalance'].forEach(k=>obj[k]=Number(obj[k]||0));
     obj.depositsOk=form.elements.depositsOk.checked;
-    state.pension=obj; save();
+    state.pension=obj; state.reportType='pension'; state.insurance=null; save();
     if(isReal && state.requestId && window.PensionBackend?.configured?.()){
       const submitBtn=form.querySelector('button[type=submit]');
       submitBtn.disabled=true; submitBtn.textContent='שומר נתונים...';
@@ -164,6 +181,150 @@ function renderData(){
         .catch(err=>{console.error(err); alert('הפרטים המזהים נשמרו, אך שמירת הנתונים הפנסיוניים נכשלה. אפשר לנסות שוב.'); submitBtn.disabled=false; submitBtn.textContent='נתח את החיסכון שלי';});
     } else navigate('dashboard');
   });
+}
+
+
+function cleanCell(v){ return String(v??'').trim(); }
+function numCell(v){
+  if(typeof v==='number' && Number.isFinite(v)) return v;
+  const n=Number(String(v??'').replace(/,/g,'').replace(/[^0-9.\-]/g,''));
+  return Number.isFinite(n)?n:0;
+}
+function annualizePremium(amount,type){
+  const t=cleanCell(type);
+  if(/חודש/.test(t)) return amount*12;
+  if(/רבע/.test(t)) return amount*4;
+  return amount;
+}
+function parseStartYear(period){
+  const m=cleanCell(period).match(/(\d{2})\/(\d{2})\/(\d{4})/);
+  return m?Number(m[3]):null;
+}
+function insuranceBucket(main){
+  const v=cleanCell(main);
+  if(v.includes('רכב')||v.includes('דירה')) return 'general';
+  if(v.includes('בריאות')||v.includes('סיעודי')||v.includes('כתב שירות')||v.includes('תאונות')) return 'health';
+  if(v.includes('חיים')||v.includes('כושר עבודה')) return 'life';
+  return 'other';
+}
+function maskPolicy(v){
+  const s=cleanCell(v);
+  if(!s) return 'ללא מספר';
+  return s.length<=4?s:`••••${s.slice(-4)}`;
+}
+async function parseInsuranceWorkbook(file){
+  if(!window.XLSX) throw new Error('Excel parser unavailable');
+  const buf=await file.arrayBuffer();
+  const book=XLSX.read(buf,{type:'array',raw:false});
+  const ws=book.Sheets[book.SheetNames[0]];
+  const grid=XLSX.utils.sheet_to_json(ws,{header:1,defval:'',raw:false});
+  const headerIndex=grid.findIndex(row=>row.some(v=>cleanCell(v)==='תעודת זהות') && row.some(v=>cleanCell(v)==='ענף ראשי') && row.some(v=>cleanCell(v).includes('פרמיה')));
+  if(headerIndex<0) throw new Error('headers not found');
+  const headers=grid[headerIndex].map(cleanCell);
+  const idx=(name,partial=false)=>headers.findIndex(h=>partial?h.includes(name):h===name);
+  const c={id:idx('תעודת זהות'),main:idx('ענף ראשי'),sub:idx('ענף (משני)'),product:idx('סוג מוצר'),company:idx('חברה'),period:idx('תקופת ביטוח'),details:idx('פרטים נוספים'),premium:idx('פרמיה',true),premiumType:idx('סוג פרמיה'),policy:idx('מספר פוליסה')};
+  if([c.main,c.sub,c.company,c.premium,c.premiumType].some(x=>x<0)) throw new Error('required columns missing');
+  const records=[];
+  for(const row of grid.slice(headerIndex+1)){
+    const main=cleanCell(row[c.main]);
+    if(!main || main.startsWith('תחום -')) continue;
+    const amount=numCell(row[c.premium]);
+    if(!cleanCell(row[c.company]) && !amount) continue;
+    records.push({
+      main, sub:cleanCell(row[c.sub]), product:cleanCell(row[c.product]), company:cleanCell(row[c.company]),
+      period:cleanCell(row[c.period]), details:cleanCell(row[c.details]), premium:amount,
+      premiumType:cleanCell(row[c.premiumType]), policy:cleanCell(row[c.policy]), annual:annualizePremium(amount,row[c.premiumType])
+    });
+  }
+  if(!records.length) throw new Error('no insurance records');
+  const nameRow=grid.slice(0,headerIndex).flat().map(cleanCell).find(v=>v && !v.includes('התיק הביטוחי') && !/^\d{2}\/\d{2}\/\d{4}$/.test(v))||'';
+  const generatedText=grid.slice(0,headerIndex).flat().map(cleanCell).find(v=>/^\d{2}\/\d{2}\/\d{4}$/.test(v))||'';
+  const sum=arr=>arr.reduce((a,b)=>a+b,0);
+  const annualTotal=sum(records.map(r=>r.annual));
+  const monthlyAverage=annualTotal/12;
+  const categories={general:0,health:0,life:0,other:0};
+  records.forEach(r=>categories[insuranceBucket(r.main)]+=r.annual);
+  const policies=new Map();
+  records.forEach(r=>{
+    const key=r.policy||`${r.company}|${r.main}|${r.sub}`;
+    if(!policies.has(key)) policies.set(key,{policyMasked:maskPolicy(r.policy),company:r.company,main:r.main,annual:0,coverages:new Set(),period:r.period,startYear:parseStartYear(r.period)});
+    const p=policies.get(key); p.annual+=r.annual; p.coverages.add(r.sub||r.product); if(!p.startYear) p.startYear=parseStartYear(r.period);
+  });
+  const policyList=[...policies.values()].map(p=>({...p,coverages:[...p.coverages].filter(Boolean)})).sort((a,b)=>b.annual-a.annual);
+  const companies={}; records.forEach(r=>companies[r.company]=(companies[r.company]||0)+r.annual);
+  const mandatoryPolicies=new Set(records.filter(r=>r.sub.includes('רכב חובה')).map(r=>r.policy||r.company));
+  const comprehensivePolicies=new Set(records.filter(r=>r.sub.includes('ביטוח מקיף') && r.product==='פוליסת ביטוח').map(r=>r.policy||r.company));
+  const lifeAnnual=sum(records.filter(r=>r.main.includes('ביטוח חיים')).map(r=>r.annual));
+  const nursingRecords=records.filter(r=>r.main.includes('סיעודי'));
+  const healthPolicy=policyList.find(p=>p.main.includes('בריאות') && p.coverages.length>=3);
+  const oldest=policyList.filter(p=>p.startYear).sort((a,b)=>a.startYear-b.startYear)[0];
+  const zeroCostRiders=records.filter(r=>r.premium===0).length;
+  const insights=[];
+  insights.push({level:'info',title:'עלות הביטוחים בתיק',text:`לפי הדוח, סך הפרמיות הוא כ-${money(annualTotal)} לשנה, שהם כ-${money(monthlyAverage)} לחודש בממוצע.`,priority:1});
+  if(lifeAnnual>0) insights.push({level:'warn',title:'ביטוח החיים הוא רכיב משמעותי בעלות',text:`ביטוח החיים עולה כ-${money(lifeAnnual/12)} לחודש (${money(lifeAnnual)} לשנה). לפני שינוי חשוב לבדוק סכום ביטוח, צורך משפחתי ומצב בריאותי.`,priority:2});
+  if(nursingRecords.length){
+    const nursingAnnual=sum(nursingRecords.map(r=>r.annual)); const year=Math.min(...nursingRecords.map(r=>parseStartYear(r.period)||9999));
+    insights.push({level:'warn',title:'פוליסת סיעוד ותיקה דורשת זהירות',text:`נמצאה פוליסת סיעוד בעלות של כ-${money(nursingAnnual/12)} לחודש${year<9999?`, שמתחילה בשנת ${year}`:''}. פוליסות ותיקות עשויות לכלול תנאים ייחודיים ולכן אין לבטל או להחליף לפני בדיקה מקצועית.`,priority:2});
+  }
+  if(mandatoryPolicies.size>1 || comprehensivePolicies.size>1) insights.push({level:'warn',title:'מספר פוליסות רכב פעילות',text:`בדוח נמצאו ${mandatoryPolicies.size} פוליסות חובה ו-${comprehensivePolicies.size} פוליסות מקיף. אם מדובר במספר כלי רכב זה עשוי להיות תקין; אם מדובר באותו רכב, כדאי לבדוק חפיפה.`,priority:1});
+  if(healthPolicy) insights.push({level:'good',title:'כיסויי בריאות מרוכזים בפוליסה מרכזית',text:`בפוליסה ${healthPolicy.policyMasked} אצל ${healthPolicy.company} מרוכזים ${healthPolicy.coverages.length} כיסויים/שירותים. ריכוז לפי מספר פוליסה מונע ספירה שגויה של כל כיסוי כפוליסה נפרדת.`,priority:3});
+  if(oldest && oldest.startYear && oldest.startYear<=new Date().getFullYear()-10) insights.push({level:'info',title:'נמצאה פוליסה ותיקה',text:`הפוליסה הוותיקה ביותר בדוח מתחילה בשנת ${oldest.startYear}. לפני שינוי בפוליסה ותיקה כדאי לבדוק תנאים, החרגות וזכויות שנצברו.`,priority:3});
+  if(zeroCostRiders) insights.push({level:'good',title:'כתבי שירות ללא פרמיה נפרדת',text:`נמצאו ${zeroCostRiders} רכיבים שמופיעים בדוח בעלות 0 ₪. הם עשויים להיות כלולים במסגרת פוליסה אחרת ולא בהכרח מייצגים כיסוי חינמי עצמאי.`,priority:4});
+  const topCategory=Object.entries(categories).sort((a,b)=>b[1]-a[1])[0];
+  return {
+    clientLabel:nameRow.replace(/\s*-\s*[^-]+$/,''), generatedAt:generatedText, rowsCount:records.length, policyCount:policies.size,
+    annualTotal, monthlyAverage, categories, policyList, companies, insights,
+    mandatoryCount:mandatoryPolicies.size, comprehensiveCount:comprehensivePolicies.size, lifeAnnual, zeroCostRiders,
+    topCategory:topCategory?.[0]||'general'
+  };
+}
+function insurancePreviewHtml(a){
+  return `<strong>הדוח נקרא בהצלחה</strong><div class="insurance-preview-grid"><div><small>עלות שנתית</small><strong>${money(a.annualTotal)}</strong></div><div><small>ממוצע חודשי</small><strong>${money(a.monthlyAverage)}</strong></div><div><small>פוליסות מרכזיות</small><strong>${a.policyCount}</strong></div></div><button class="primary" type="button" data-analyze-insurance>הצג סיכום ותובנות</button>`;
+}
+function insuranceCategoryLabel(k){ return ({general:'רכב ודירה',health:'בריאות וסיעוד',life:'חיים',other:'אחר'})[k]||k; }
+function renderInsuranceDashboard(){
+  const a=state.insurance; const container=document.getElementById('dashboardContent');
+  const total=Math.max(a.annualTotal,1);
+  const general=Math.round(a.categories.general/total*100), health=Math.round(a.categories.health/total*100), life=Math.round(a.categories.life/total*100), other=Math.max(0,100-general-health-life);
+  const reviewCount=a.insights.filter(x=>x.level==='warn').length;
+  const firstName=(state.verification?.fullName||a.clientLabel||'').trim().split(/\s+/)[0]||'';
+  const categoryRows=Object.entries(a.categories).filter(([,v])=>v>0).sort((x,y)=>y[1]-x[1]);
+  const topPolicies=a.policyList.slice(0,7);
+  container.innerHTML=`
+    <div class="client-dashboard-shell">
+      <aside class="client-sidebar"><div class="client-sidebar-brand"><span class="sidebar-logo">PC</span><span>Pension Control</span></div><nav class="client-nav">
+        <button class="client-nav-item active" data-dash-target="overview"><span class="nav-icon">⌂</span><span>מבט מהיר</span></button>
+        <button class="client-nav-item" data-dash-target="distribution"><span class="nav-icon">◔</span><span>חלוקת עלויות</span></button>
+        <button class="client-nav-item" data-dash-target="recommendations"><span class="nav-icon">✦</span><span>נקודות לבדיקה</span></button>
+        <button class="client-nav-item" data-dash-target="policies"><span class="nav-icon">▤</span><span>פוליסות</span></button>
+        <button class="client-nav-item" id="editDataSide"><span class="nav-icon">↥</span><span>העלאת דוח אחר</span></button>
+      </nav><div class="sidebar-help"><span class="sidebar-help-icon">i</span><div><strong>ניתוח דוח הר הביטוח</strong><small>המערכת מרכזת שורות לפי מספר פוליסה ומסמנת נקודות לבדיקה, לא המלצות לביטול.</small></div></div></aside>
+      <div class="client-main">
+        <header class="client-dashboard-head" id="overview"><div><span class="dashboard-mode real-pill">דוח הר הביטוח</span><h1>${firstName?`היי ${firstName}, `:''}הנה התמונה הביטוחית שלך</h1><p>ריכזנו את הדוח לכמה מספרים ברורים והדגשנו נושאים שכדאי לבדוק.</p></div><button class="secondary soft-btn" id="editData">העלה דוח אחר</button></header>
+        <div class="insurance-kpi-grid">
+          <article class="insurance-kpi"><small>עלות שנתית משוערת</small><strong>${money(a.annualTotal)}</strong></article>
+          <article class="insurance-kpi"><small>ממוצע חודשי</small><strong>${money(a.monthlyAverage)}</strong></article>
+          <article class="insurance-kpi"><small>פוליסות מרכזיות</small><strong>${a.policyCount}</strong></article>
+          <article class="insurance-kpi"><small>נקודות שדורשות בדיקה</small><strong>${reviewCount}</strong></article>
+        </div>
+        <section class="insurance-summary-grid" id="distribution">
+          <article class="insurance-donut-card"><span class="card-kicker">חלוקת הפרמיות</span><h2>לאן הולך הכסף?</h2><div class="insurance-donut" style="--general:${general};--health:${health};--life:${life};--other:${other}"><div class="insurance-donut-center"><small>סה״כ לשנה</small><strong>${money(a.annualTotal)}</strong></div></div><div class="insurance-legend">${categoryRows.map(([k,v])=>`<div class="insurance-legend-row"><i style="background:${k==='general'?'#1539d4':k==='health'?'#6b63e8':k==='life'?'#f59e0b':'#cbd5e1'}"></i><span>${insuranceCategoryLabel(k)}</span><strong>${money(v)}</strong></div>`).join('')}</div></article>
+          <article class="policy-card"><span class="card-kicker">סיכום מהיר</span><h2>מה בולט בתיק?</h2><div class="policy-list">${a.insights.slice(0,4).map(x=>`<div class="policy-row"><div><strong>${x.title}</strong><small>${x.text}</small></div><span>${x.level==='warn'?'⚠':'✓'}</span></div>`).join('')}</div></article>
+        </section>
+        <section class="recommendation-section" id="recommendations"><div class="section-title-row"><div><span class="card-kicker">בדיקה חכמה</span><h2>נקודות שכדאי לעבור עליהן</h2></div><span class="recommendation-count">${reviewCount} דורשות תשומת לב</span></div><div class="recommendation-list-modern">${a.insights.map((x,i)=>`<article class="recommendation-item ${x.level==='info'?'good':x.level}"><span class="recommendation-num">${String(i+1).padStart(2,'0')}</span><div><h3>${x.title}</h3><p>${x.text}</p>${x.level==='warn'?'<div class="insight-note">לא מבצעים שינוי אוטומטי — זו נקודה לבדיקה בלבד.</div>':''}</div><span class="recommendation-arrow">←</span></article>`).join('')}</div></section>
+        <section class="all-insights-section" id="policies"><div class="section-title-row"><div><span class="card-kicker">ריכוז לפי מספר פוליסה</span><h2>הפוליסות המרכזיות</h2></div><span class="recommendation-count">${a.policyCount} פוליסות</span></div><div class="policy-card"><div class="policy-list">${topPolicies.map(p=>`<div class="policy-row"><div><strong>${p.company} · ${p.main}</strong><small>${p.policyMasked} · ${p.coverages.length} כיסויים/רכיבים${p.period?' · '+p.period:''}</small></div><strong>${money(p.annual)} / שנה</strong></div>`).join('')}</div></div></section>
+        <div class="insurance-source-note"><strong>איך חושב הסיכום?</strong> פרמיה חודשית הומרה לעלות שנתית ×12; פרמיה שנתית נשארה כפי שהיא. רכיבים בעלי אותו מספר פוליסה מאוחדים כדי לא לספור כל כיסוי כפוליסה נפרדת. הדוח מציג מידע קיים ועלויות, אך אינו כולל בהכרח סכומי ביטוח, חריגים, מצב רפואי או התאמה אישית מלאה.</div>
+        <div class="disclaimer modern-disclaimer"><strong>גילוי נאות:</strong> התובנות הן כלי סינון והסבר בלבד. אין בהן המלצה לבטל, לרכוש או לשנות פוליסה. במיוחד בפוליסות ותיקות, סיעוד ובריאות, שינוי ללא בדיקה מקצועית עלול לפגוע בזכויות או בכיסוי.</div>
+      </div>
+    </div>`;
+  document.getElementById('pensionMessageBtn')?.addEventListener('click',()=>{
+    const url=window.PENSION_CONFIG?.contactMessageUrl||'';
+    if(url){ window.open(url,'_blank','noopener,noreferrer'); return; }
+    alert('אפשרות שליחת ההודעה תחובר לאחר בחירת ערוץ ההודעות. בינתיים אפשר להתקשר אלינו ב־04-8220228.');
+  });
+  document.getElementById('editData')?.addEventListener('click',()=>navigate('data'));
+  document.getElementById('editDataSide')?.addEventListener('click',()=>navigate('data'));
+  document.querySelectorAll('[data-dash-target]').forEach(btn=>btn.addEventListener('click',()=>{ document.querySelectorAll('.client-nav-item').forEach(x=>x.classList.remove('active')); btn.classList.add('active'); document.getElementById(btn.dataset.dashTarget)?.scrollIntoView({behavior:'smooth',block:'start'}); }));
 }
 
 function scoreEngine(profile,p){
@@ -196,6 +357,7 @@ function scoreLabel(s){ if(s>=85)return ['מצוין','הנתונים נראים
 
 function renderDashboard(){
   app.appendChild(tpl('dashboardTpl'));
+  if(state.reportType==='insurance' && state.insurance){ renderInsuranceDashboard(); return; }
   const p=state.pension, pr=state.profile||{};
   const r=scoreEngine(pr,p); const [label,desc]=scoreLabel(r.score);
   const container=document.getElementById('dashboardContent');
@@ -280,6 +442,17 @@ function renderDashboard(){
                   <span class="recommendation-arrow">←</span>
                 </article>`).join('')}
             </div>
+          </div>
+        </section>
+
+        <section class="pension-help-cta" aria-label="סיוע לשיפור התיק הפנסיוני">
+          <div>
+            <h2>רוצה לבדוק איך אפשר לשפר את התיק הפנסיוני שלך?</h2>
+            <p>אם תרצה לעבור על התוצאות, להבין את הנקודות שעלו ולבחון מה כדאי לבדוק לעומק — אפשר לדבר איתנו. נשמח לעשות סדר ולכוון אותך להמשך הבדיקה.</p>
+          </div>
+          <div class="pension-help-actions">
+            <a class="pension-help-call" href="tel:048220228">התקשרו 04-8220228</a>
+            <button class="pension-help-message" id="pensionMessageBtn" type="button">שלחו הודעה</button>
           </div>
         </section>
 
