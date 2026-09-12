@@ -40,19 +40,46 @@ function bindNavigation(){
 
 function renderHome(){
   app.appendChild(tpl('homeTpl'));
-  document.querySelector('[data-demo]').addEventListener('click',()=>{
+
+  // כפתור דמו קיים רק בחלק מהגרסאות של מסך הבית.
+  // בדיקת null מונעת קריסה של כל מסך הבית כאשר הכפתור אינו קיים.
+  const demoBtn=document.querySelector('[data-demo]');
+  if(demoBtn) demoBtn.addEventListener('click',()=>{
     state.mode='anonymous';
     state.profile={age:27,salary:17000,family:'single',risk:'medium',goal:'understand'};
     state.pension={pensionBalance:312000,pensionDeposit:3150,pensionAssetFee:.28,pensionDepositFee:1.6,pensionTrack:'general',studyBalance:121000,studyFee:.65,studyTrack:'sp500',otherBalance:50500,otherActive:'no',depositsOk:true};
     save(); navigate('dashboard');
   });
+
   const scrollBtn=document.querySelector('[data-scroll-checks]');
   if(scrollBtn) scrollBtn.addEventListener('click',()=>document.getElementById('checkTypes')?.scrollIntoView({behavior:'smooth'}));
-  document.querySelectorAll('[data-start-mode]').forEach(btn=>btn.addEventListener('click',()=>{
-    state.mode=btn.dataset.startMode;
+
+  const startFlow=(mode)=>{
+    state.mode=mode;
     state.profile=null; state.pension=null; state.insurance=null; state.reportType=null; state.verification=null;
     save(); navigate('onboarding');
+  };
+
+  document.querySelectorAll('[data-start-mode]').forEach(btn=>btn.addEventListener('click',e=>{
+    e.preventDefault();
+    startFlow(btn.dataset.startMode);
   }));
+
+  // גם לחיצה על כל הכרטיס מתחילה את התהליך, לא רק על החץ.
+  document.querySelectorAll('.home-check-card').forEach(card=>{
+    card.setAttribute('role','button');
+    card.setAttribute('tabindex','0');
+    const btn=card.querySelector('[data-start-mode]');
+    if(!btn) return;
+    const activate=(e)=>{
+      if(e.target.closest('[data-start-mode]')) return;
+      startFlow(btn.dataset.startMode);
+    };
+    card.addEventListener('click',activate);
+    card.addEventListener('keydown',e=>{
+      if(e.key==='Enter' || e.key===' '){ e.preventDefault(); startFlow(btn.dataset.startMode); }
+    });
+  });
 }
 
 function renderOnboarding(){
