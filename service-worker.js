@@ -1,4 +1,4 @@
-const CACHE='pension-control-v8-blue-1';
+const CACHE='pension-control-v8-1';
 const ASSETS=['./','./index.html','./styles.css','./app.js','./backend.js','./config.js','./manifest.webmanifest'];
 
 self.addEventListener('install', event => {
