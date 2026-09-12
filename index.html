@@ -29,62 +29,79 @@
   </div>
 
   <template id="homeTpl">
-    <section class="hero section">
-      <div class="hero-copy">
-        <span class="eyebrow">הכסף שלך. סוף סוף ברור.</span>
-        <h1>בדיקת בריאות לחיסכון הפנסיוני שלך בתוך דקות</h1>
-        <p class="lead">רכז פנסיה, גמל והשתלמות במקום אחד, קבל Pension Score ותבין מה כדאי לבדוק — בלי גיליונות אקסל ובלי מונחים מסובכים.</p>
-        <div class="cta-row">
-          <button class="primary" data-scroll-checks>בחר סוג בדיקה</button>
-          <button class="secondary" data-demo>צפה בדוגמה</button>
+    <section class="app-home section">
+      <div class="home-welcome">
+        <div>
+          <span class="eyebrow">Pension Control</span>
+          <h1>היי, בוא נעשה סדר בפנסיה שלך</h1>
+          <p>בחר איך תרצה להתחיל. אפשר לקבל הערכה מהירה בלי להשאיר פרטים, או לבצע בדיקת אמת עם זיהוי והרשאה.</p>
         </div>
-        <div class="trust-row">
-          <span>✓ תמונה מרוכזת</span><span>✓ ניתוח דמי ניהול</span><span>✓ תובנות מותאמות</span>
+        <div class="home-security-pill">
+          <span>🔒</span>
+          <div><strong>הפרטיות שלך חשובה לנו</strong><small>אתה בוחר כמה מידע לשתף</small></div>
         </div>
       </div>
-      <div class="hero-card">
-        <div class="mini-score">
-          <div class="score-ring" style="--score:74"><span>74</span><small>/100</small></div>
-          <div><strong>Pension Score</strong><p>מצב טוב, יש מקום לשיפור</p></div>
-        </div>
-        <div class="mini-stat"><span>חיסכון כולל</span><strong>₪483,500</strong></div>
-        <div class="mini-insight bad">דמי הניהול בפנסיה גבוהים יחסית</div>
-        <div class="mini-insight warn">נמצאה קופה לא פעילה</div>
-        <div class="mini-insight good">ההפקדות השוטפות תקינות</div>
-      </div>
-    </section>
 
-    <section class="section check-choice" id="checkTypes">
-      <div class="choice-head">
-        <span class="eyebrow">בחר איך להתחיל</span>
-        <h2>שתי דרכים לבדוק את התמונה הפנסיונית</h2>
-        <p class="muted">אפשר להתחיל באנונימיות מלאה, או לעבור למסלול בדיקת אמת הכולל זיהוי והרשאה.</p>
-      </div>
-      <div class="choice-grid">
-        <article class="choice-card anonymous">
-          <div class="choice-icon">A</div>
-          <span class="choice-badge">ללא פרטים מזהים</span>
-          <h3>בדיקה אנונימית</h3>
-          <p>לא מבקשים שם, ת״ז, טלפון או חתימה. מזינים רק נתונים כלליים ונתונים פנסיוניים ומקבלים Pension Score ותובנות ראשוניות.</p>
-          <ul><li>ללא הרשמה</li><li>ללא ת״ז</li><li>תוצאה מיידית</li></ul>
-          <button class="secondary full-btn" data-start-mode="anonymous">התחל בדיקה אנונימית</button>
+      <div class="home-action-grid">
+        <article class="home-action-card quick">
+          <div class="home-card-top">
+            <span class="home-action-icon">⚡</span>
+            <span class="home-card-badge">בלי פרטים אישיים</span>
+          </div>
+          <h2>בדיקה מהירה</h2>
+          <p>קבל Pension Score ראשוני ותובנות על דמי ניהול, מסלולים ופיזור החיסכון — בלי שם, ת״ז או טלפון.</p>
+          <div class="home-check-list">
+            <span>✓ תוצאה מיידית</span>
+            <span>✓ ללא הרשמה</span>
+            <span>✓ כ-3 דקות</span>
+          </div>
+          <button class="secondary full-btn home-main-cta" data-start-mode="anonymous">התחל בדיקה מהירה</button>
         </article>
-        <article class="choice-card real">
-          <div class="choice-icon">✓</div>
-          <span class="choice-badge solid">בדיקה על בסיס מידע אמיתי</span>
-          <h3>בדיקת אמת</h3>
-          <p>מסלול נפרד הכולל פרטים מזהים, תאריך הנפקת ת״ז, חתימה והסכמה. מיועד לתהליך שבו מנתחים מידע אמיתי של המשתמש.</p>
-          <ul><li>זיהוי והרשאה</li><li>אפשרות להעלאת דוח אמיתי</li><li>תמונה מדויקת יותר</li></ul>
-          <button class="primary full-btn" data-start-mode="real">התחל בדיקת אמת</button>
-          <small class="choice-note">בגרסת ה-MVP אין עדיין חיבור אוטומטי למסלקה; החיבור יתווסף בשלב ה-backend.</small>
+
+        <article class="home-action-card real featured">
+          <div class="recommended-ribbon">מומלץ לתמונה מדויקת</div>
+          <div class="home-card-top">
+            <span class="home-action-icon shield">✓</span>
+            <span class="home-card-badge strong">בדיקה מלאה</span>
+          </div>
+          <h2>בדיקת אמת</h2>
+          <p>בדיקה המבוססת על הפרטים והמידע הפנסיוני שלך, עם תהליך זיהוי, הרשאה וחתימה דיגיטלית.</p>
+          <div class="home-check-list">
+            <span>✓ זיהוי והרשאה</span>
+            <span>✓ מידע אמיתי</span>
+            <span>✓ תמונה מדויקת יותר</span>
+          </div>
+          <button class="primary full-btn home-main-cta" data-start-mode="real">התחל בדיקת אמת</button>
+          <small class="home-card-note">בשלב ה-MVP הבדיקה מסתמכת על הנתונים והמסמכים שתזין למערכת.</small>
         </article>
       </div>
-    </section>
 
-    <section class="section three-cols">
-      <article class="feature"><span>01</span><h3>מעלים מידע</h3><p>ממלאים מספר פרטים ומעלים דוח פנסיוני או מזינים את הנתונים ידנית.</p></article>
-      <article class="feature"><span>02</span><h3>אנחנו מנתחים</h3><p>המערכת בודקת דמי ניהול, פיזור מוצרים, מסלולים וחריגות בסיסיות.</p></article>
-      <article class="feature"><span>03</span><h3>מקבלים תמונה ברורה</h3><p>ציון אחד, נתונים מרכזיים ורשימת דברים שכדאי לבדוק לפי סדר חשיבות.</p></article>
+      <section class="home-preview-card">
+        <div class="home-preview-copy">
+          <span class="eyebrow">מה תקבל בסוף?</span>
+          <h2>תמונה אחת ברורה של החיסכון שלך</h2>
+          <p>במקום לעבור בין דוחות ומונחים מורכבים, המערכת מרכזת את הנתונים ומציגה מה נראה טוב ומה כדאי לבדוק.</p>
+          <button class="ghost preview-demo-btn" data-demo>צפה בדוגמה</button>
+        </div>
+        <div class="home-preview-dashboard">
+          <div class="preview-score-circle"><span>74</span><small>מתוך 100</small></div>
+          <div class="preview-summary">
+            <small>סה״כ חיסכון</small>
+            <strong>₪483,500</strong>
+            <div class="preview-bars"><i style="--w:78%"></i><i style="--w:55%"></i><i style="--w:34%"></i></div>
+          </div>
+          <div class="preview-insights">
+            <span class="positive">✓ ההפקדות תקינות</span>
+            <span class="attention">! דמי הניהול דורשים בדיקה</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="home-trust-strip">
+        <div><span>01</span><strong>מזינים מידע</strong><small>רק מה שנוח לך לשתף</small></div>
+        <div><span>02</span><strong>המערכת מנתחת</strong><small>דמי ניהול, מסלולים ופיזור</small></div>
+        <div><span>03</span><strong>מקבלים כיוון ברור</strong><small>Pension Score ותובנות</small></div>
+      </section>
     </section>
   </template>
 
