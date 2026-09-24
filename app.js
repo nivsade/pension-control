@@ -89,7 +89,7 @@ function renderHome(){
 
   const sendLead=async(form,source,statusEl)=>{
     const fd=new FormData(form);
-    const payload={action:'submit_lead',source,fullName:String(fd.get('fullName')||''),phone:String(fd.get('phone')||''),email:String(fd.get('email')||'')};
+    const payload={action:'submit_lead',source,fullName:String(fd.get('fullName')||''),phone:String(fd.get('phone')||''),email:String(fd.get('email')||''),idNumber:String(fd.get('idNumber')||''),idIssueDate:String(fd.get('idIssueDate')||'')};
     if(!window.PensionBackend?.configured()) throw new Error('BACKEND_NOT_CONFIGURED');
     const out=await window.PensionBackend.callFunction(payload);
     if(statusEl) statusEl.textContent='הפרטים התקבלו ✓';
@@ -205,7 +205,7 @@ function renderData(){
           <div style="width:64px;height:64px;margin:0 auto 18px;border-radius:50%;display:grid;place-items:center;background:#eaf2ff;color:#1769e0;font-size:30px;font-weight:800">✓</div>
           <h2 style="margin-bottom:10px">הבקשה שלך התקבלה בהצלחה</h2>
           <p class="muted" style="max-width:620px;margin:0 auto 14px">אין צורך להזין יתרות, הפקדות או סכומים מקרן הפנסיה. אנחנו נפיק את הנתונים הרלוונטיים ונכין עבורך את הבדיקה.</p>
-          <p class="muted" style="max-width:620px;margin:0 auto 24px">התהליך עשוי להימשך מספר שעות ועד מספר ימי עסקים. כשהתוצאה תהיה מוכנה נוכל לשלוח לך קישור אישי לצפייה בתוצאות.</p>
+          <p class="muted" style="max-width:620px;margin:0 auto 24px">התוצאות יהיו מוכנות עד 3 ימי עסקים. כשהבדיקה תהיה מוכנה נוכל לשלוח לך קישור אישי לצפייה בתוצאות.</p>
           <button type="button" class="primary" data-go="home">חזרה למסך הבית</button>
         </div>`;
       panel.querySelector('[data-go="home"]')?.addEventListener('click',()=>navigate('home'));

@@ -120,3 +120,11 @@
   .home-check-card{min-height:0;padding:20px;}
   .home-check-card h3{font-size:23px;}
 }
+
+/* V12 — visible PC logo + paid pension identification */
+.brand-logo-img{width:38px;height:38px;object-fit:contain;border-radius:10px;display:block;box-shadow:0 5px 16px rgba(23,105,224,.16)}
+.paid-ready-note{margin:12px 0 16px;padding:10px 12px;border-radius:12px;background:#eaf2ff;color:#1259b8;font-weight:800;text-align:center}
+.paid-check-form{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.paid-check-form label{min-width:0}
+.paid-check-form .checkbox,.paid-check-form .paid-submit,.paid-check-form .lead-status{grid-column:1/-1}
+@media(max-width:640px){.paid-check-form{grid-template-columns:1fr}.paid-check-form .checkbox,.paid-check-form .paid-submit,.paid-check-form .lead-status{grid-column:auto}.brand-logo-img{width:34px;height:34px}}

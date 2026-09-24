@@ -15,7 +15,7 @@
   <div class="app-shell">
     <header class="topbar">
       <button class="brand" data-go="home" aria-label="דף הבית">
-        <span class="brand-mark">PC</span>
+        <img class="brand-logo-img" src="favicon.png?v=12" alt="PC" />
         <span>Pension Control</span>
       </button>
       <nav class="top-actions">
@@ -125,18 +125,21 @@
         <div class="pc-modal-backdrop" data-close-paid></div>
         <div class="pc-modal-card" role="dialog" aria-modal="true" aria-labelledby="paidCheckTitle">
           <button class="pc-modal-close" type="button" data-close-paid aria-label="סגירה">×</button>
-          <span class="home-chip">בדיקה פנסיונית · 49 ₪</span>
+          <span class="home-chip">בדיקה פנסיונית מלאה</span>
           <h2 id="paidCheckTitle">מתחילים בבדיקה הפנסיונית</h2>
-          <p>השאירו פרטים ולאחר מכן תעברו לעמוד התשלום המאובטח.</p>
+          <p>מלאו את פרטי הזיהוי והקשר. לאחר מכן תעברו לעמוד התשלום המאובטח.</p>
+          <div class="paid-ready-note">✓ התוצאות יהיו מוכנות עד 3 ימי עסקים</div>
           <form id="paidCheckForm" class="paid-check-form">
             <label>שם מלא<input name="fullName" required autocomplete="name" placeholder="שם מלא"></label>
+            <label>מספר תעודת זהות<input name="idNumber" required inputmode="numeric" maxlength="9" pattern="[0-9]{5,9}" placeholder="123456789"></label>
+            <label>תאריך הנפקת תעודת זהות<input name="idIssueDate" required type="date"></label>
             <label>טלפון<input name="phone" required inputmode="tel" autocomplete="tel" placeholder="05X-XXXXXXX"></label>
             <label>אימייל<input name="email" type="email" autocomplete="email" placeholder="name@example.com"></label>
             <label class="checkbox"><input type="checkbox" required name="consent"> אני מאשר/ת שניתן ליצור איתי קשר לצורך הבדיקה</label>
-            <button class="primary paid-submit" type="submit">המשך לתשלום 49 ₪</button>
+            <button class="primary paid-submit" type="submit">המשך לתשלום</button>
             <p class="lead-status" id="paidLeadStatus"></p>
           </form>
-          <small class="payment-note">התשלום מתבצע בעמוד המאובטח של PayMe.</small>
+          <small class="payment-note">התשלום מתבצע בעמוד המאובטח של PayMe. התוצאות יימסרו עד 3 ימי עסקים.</small>
         </div>
       </div>
     </section>
