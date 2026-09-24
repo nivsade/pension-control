@@ -58,3 +58,65 @@
 
 /* V10.1 compact home cards */
 .home-check-card h3{line-height:1.12;max-width:13ch}.home-check-card p{line-height:1.42;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:4;overflow:hidden}.home-check-card>div{min-width:0}
+
+/* V10.2 — readable three-option cards */
+.home-check-cards{
+  width:100%;
+  max-width:980px;
+  gap:12px;
+}
+.home-check-card{
+  min-width:0;
+  min-height:250px;
+  padding:22px 18px 18px;
+  display:flex;
+  flex-direction:column;
+  align-items:stretch;
+  gap:10px;
+  text-align:right;
+}
+.home-check-card .home-card-icon{
+  width:46px;
+  height:46px;
+  flex:0 0 auto;
+  margin:0 0 2px auto;
+}
+.home-check-card>div{
+  width:100%;
+  flex:1;
+}
+.home-check-card .home-card-kicker{
+  display:block;
+  min-height:17px;
+  white-space:nowrap;
+}
+.home-check-card h3{
+  max-width:none;
+  width:100%;
+  font-size:21px;
+  line-height:1.2;
+  margin:7px 0 8px;
+}
+.home-check-card p{
+  width:100%;
+  font-size:13px;
+  line-height:1.5;
+  display:block;
+  overflow:visible;
+  margin:0;
+}
+.home-check-card .home-card-button{
+  width:42px;
+  height:42px;
+  flex:0 0 42px;
+  align-self:flex-start;
+  margin-top:4px;
+}
+@media(max-width:1050px) and (min-width:651px){
+  .home-check-cards{grid-template-columns:repeat(3,minmax(0,1fr));}
+}
+@media(max-width:650px){
+  .home-check-cards{grid-template-columns:1fr;max-width:440px;}
+  .home-check-card{min-height:0;padding:20px;}
+  .home-check-card h3{font-size:23px;}
+}
