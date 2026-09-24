@@ -80,6 +80,34 @@ function renderHome(){
       if(e.key==='Enter' || e.key===' '){ e.preventDefault(); startFlow(btn.dataset.startMode); }
     });
   });
+
+  const paidModal=document.getElementById('paidCheckModal');
+  const openPaid=()=>{ paidModal?.classList.remove('hidden'); paidModal?.setAttribute('aria-hidden','false'); document.body.style.overflow='hidden'; };
+  const closePaid=()=>{ paidModal?.classList.add('hidden'); paidModal?.setAttribute('aria-hidden','true'); document.body.style.overflow=''; };
+  document.querySelectorAll('[data-open-paid]').forEach(el=>el.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();openPaid();}));
+  document.querySelectorAll('[data-close-paid]').forEach(el=>el.addEventListener('click',closePaid));
+
+  const sendLead=async(form,source,statusEl)=>{
+    const fd=new FormData(form);
+    const payload={action:'submit_lead',source,fullName:String(fd.get('fullName')||''),phone:String(fd.get('phone')||''),email:String(fd.get('email')||'')};
+    if(!window.PensionBackend?.configured()) throw new Error('BACKEND_NOT_CONFIGURED');
+    const out=await window.PensionBackend.callFunction(payload);
+    if(statusEl) statusEl.textContent='הפרטים התקבלו ✓';
+    return out;
+  };
+  const homeLead=document.getElementById('homeLeadForm');
+  homeLead?.addEventListener('submit',async e=>{
+    e.preventDefault(); const st=document.getElementById('homeLeadStatus'); const btn=homeLead.querySelector('button');
+    btn.disabled=true; if(st) st.textContent='שולח…';
+    try{ await sendLead(homeLead,'home_callback',st); homeLead.reset(); }catch(_){ if(st) st.textContent='לא הצלחנו לשלוח כרגע. אפשר להתקשר ל־04-8220228.'; }finally{btn.disabled=false;}
+  });
+  const paidForm=document.getElementById('paidCheckForm');
+  paidForm?.addEventListener('submit',async e=>{
+    e.preventDefault(); const st=document.getElementById('paidLeadStatus'); const btn=paidForm.querySelector('button[type=submit]');
+    btn.disabled=true; if(st) st.textContent='שומר פרטים ומעביר לתשלום…';
+    try{ await sendLead(paidForm,'paid_pension_49',st); window.location.href='https://live.payme.io/sale/template/SALE1790-257222CL-FRUJKNEW-ILZG7KC3'; }
+    catch(_){ if(st) st.textContent='לא הצלחנו לשמור את הפרטים. נסו שוב או התקשרו ל־04-8220228.'; btn.disabled=false; }
+  });
 }
 
 function renderOnboarding(){
@@ -89,8 +117,8 @@ function renderOnboarding(){
   const pill=document.getElementById('onboardingModePill');
   const step=document.getElementById('onboardingStepLabel');
   const continueBtn=document.getElementById('profileContinue');
-  if(pill){ pill.textContent=isReal?'בדיקת אמת':'בדיקה אנונימית'; pill.classList.add(isReal?'real-pill':'anon-pill'); }
-  if(step) step.textContent=isReal?'בדיקת אמת · שלב 1 מתוך 4':'בדיקה אנונימית · שלב 1 מתוך 3';
+  if(pill){ pill.textContent=isReal?'בדיקת התיק הפנסיוני והביטוחי':'בדיקה אנונימית'; pill.classList.add(isReal?'real-pill':'anon-pill'); }
+  if(step) step.textContent=isReal?'בדיקת התיק הפנסיוני והביטוחי · שלב 1 מתוך 4':'בדיקה אנונימית · שלב 1 מתוך 3';
   if(continueBtn) continueBtn.textContent=isReal?'המשך להרשאה וזיהוי':'המשך לנתונים הפנסיוניים';
   const form=document.getElementById('profileForm');
   if(state.profile){ Object.entries(state.profile).forEach(([k,v])=>{ if(form.elements[k]) form.elements[k].value=v; }); }
@@ -164,11 +192,32 @@ function renderData(){
   if(state.mode==='real' && !state.verification) return navigate('verification');
   app.appendChild(tpl('dataTpl'));
   const isReal=state.mode==='real';
+
+  // In a real check the client does not enter pension balances manually.
+  // After identity/consent submission, the request waits for the back-office report.
+  if(isReal){
+    const panel=app.querySelector('.panel');
+    if(panel){
+      panel.innerHTML=`
+        <span class="eyebrow">בדיקת התיק הפנסיוני והביטוחי · הבקשה התקבלה</span>
+        <div class="mode-pill real-pill">בדיקת אמת</div>
+        <div style="text-align:center;padding:28px 8px 12px">
+          <div style="width:64px;height:64px;margin:0 auto 18px;border-radius:50%;display:grid;place-items:center;background:#eaf2ff;color:#1769e0;font-size:30px;font-weight:800">✓</div>
+          <h2 style="margin-bottom:10px">הבקשה שלך התקבלה בהצלחה</h2>
+          <p class="muted" style="max-width:620px;margin:0 auto 14px">אין צורך להזין יתרות, הפקדות או סכומים מקרן הפנסיה. אנחנו נפיק את הנתונים הרלוונטיים ונכין עבורך את הבדיקה.</p>
+          <p class="muted" style="max-width:620px;margin:0 auto 24px">התהליך עשוי להימשך מספר שעות ועד מספר ימי עסקים. כשהתוצאה תהיה מוכנה נוכל לשלוח לך קישור אישי לצפייה בתוצאות.</p>
+          <button type="button" class="primary" data-go="home">חזרה למסך הבית</button>
+        </div>`;
+      panel.querySelector('[data-go="home"]')?.addEventListener('click',()=>navigate('home'));
+    }
+    return;
+  }
+
   const step=document.getElementById('dataStepLabel');
   const pill=document.getElementById('dataModePill');
   const intro=document.getElementById('dataIntro');
   if(step) step.textContent=isReal?'בדיקת אמת · שלב 3 מתוך 4':'בדיקה אנונימית · שלב 2 מתוך 3';
-  if(pill){ pill.textContent=isReal?'בדיקת אמת':'בדיקה אנונימית'; pill.classList.add(isReal?'real-pill':'anon-pill'); }
+  if(pill){ pill.textContent=isReal?'בדיקת התיק הפנסיוני והביטוחי':'בדיקה אנונימית'; pill.classList.add(isReal?'real-pill':'anon-pill'); }
   if(intro) intro.textContent=isReal?'העלה דוח אמיתי והזן את הנתונים המרכזיים ממנו. בגרסת ה-MVP הניתוח מתבצע על הנתונים שהוזנו; חיבור אוטומטי למסלקה יתווסף ב-backend.':'אין צורך בשם, ת״ז או פרטי קשר. הזן את הנתונים שברשותך כדי לקבל הערכה ראשונית.';
   const form=document.getElementById('pensionForm');
   if(state.pension){ Object.entries(state.pension).forEach(([k,v])=>{ const el=form.elements[k]; if(!el)return; if(el.type==='checkbox')el.checked=!!v; else el.value=v; }); }
@@ -416,7 +465,7 @@ function renderDashboard(){
       <div class="client-main">
         <header class="client-dashboard-head" id="overview">
           <div>
-            <span class="dashboard-mode ${isReal?'real-pill':'anon-pill'}">${isReal?'בדיקת אמת':'בדיקה אנונימית'}</span>
+            <span class="dashboard-mode ${isReal?'real-pill':'anon-pill'}">${isReal?'בדיקת התיק הפנסיוני והביטוחי':'בדיקה אנונימית'}</span>
             <h1>${hello}הנה התמונה הפנסיונית שלך</h1>
             <p>${isReal?'ריכזנו את הנתונים שהזנת והדגשנו את הנקודות שכדאי לבדוק.':'זו הערכה ראשונית המבוססת על הנתונים שהזנת בלבד.'}</p>
           </div>

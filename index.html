@@ -51,10 +51,20 @@
               <span class="home-card-icon">✓</span>
               <div>
                 <span class="home-card-kicker">עם זיהוי והרשאה</span>
-                <h3>בדיקת אמת</h3>
-                <p>בדיקה המבוססת על מידע אמיתי לקבלת תמונה מדויקת יותר של התיק.</p>
+                <h3>בדיקת התיק הפנסיוני והביטוחי</h3>
+                <p>בדיקה מקיפה המבוססת על נתוני אמת. אנחנו מפיקים את הנתונים ומכינים עבורך תמונת מצב מסודרת.</p>
               </div>
-              <button class="home-card-button" data-start-mode="real" aria-label="התחל בדיקת אמת">←</button>
+              <button class="home-card-button" data-start-mode="real" aria-label="התחל בדיקת התיק הפנסיוני והביטוחי">←</button>
+            </article>
+
+            <article class="home-check-card home-check-paid" data-open-paid>
+              <span class="home-card-icon">₪</span>
+              <div>
+                <span class="home-card-kicker">בדיקה ממוקדת · 49 ₪</span>
+                <h3>בדיקה פנסיונית</h3>
+                <p>השאירו פרטים והמשיכו לתשלום מאובטח בכרטיס אשראי.</p>
+              </div>
+              <button class="home-card-button" type="button" data-open-paid aria-label="בדיקה פנסיונית בעלות 49 שקלים">←</button>
             </article>
           </div>
 
@@ -96,7 +106,36 @@
       <div class="home-blue-bottom section">
         <div><strong>תמונה אחת ברורה</strong><span>כל הנתונים החשובים במקום אחד</span></div>
         <div><strong>נקודות לשיפור</strong><span>מה כדאי לבדוק ובאיזה סדר</span></div>
-        <div><strong>בלי התחייבות</strong><span>אפשר להתחיל בבדיקה אנונימית</span></div>
+        <div><strong>בלי התחייבות</strong><span>אפשר להתחיל בבדיקה מהירה</span></div>
+      </div>
+
+      <section class="home-lead-section section">
+        <div class="home-lead-copy"><span class="home-chip">מעדיפים לדבר איתנו?</span><h2>השאירו פרטים ונחזור אליכם</h2><p>לא בטוחים איזו בדיקה מתאימה? השאירו שם וטלפון וניצור קשר.</p><a href="tel:048220228">04-8220228</a></div>
+        <form class="home-lead-form" id="homeLeadForm">
+          <label>שם מלא<input name="fullName" required autocomplete="name" placeholder="שם מלא"></label>
+          <label>טלפון<input name="phone" required inputmode="tel" autocomplete="tel" placeholder="05X-XXXXXXX"></label>
+          <label>אימייל <span>(אופציונלי)</span><input name="email" type="email" autocomplete="email" placeholder="name@example.com"></label>
+          <button class="primary" type="submit">חזרו אליי</button><p class="lead-status" id="homeLeadStatus"></p>
+        </form>
+      </section>
+
+      <div class="pc-modal hidden" id="paidCheckModal" aria-hidden="true">
+        <div class="pc-modal-backdrop" data-close-paid></div>
+        <div class="pc-modal-card" role="dialog" aria-modal="true" aria-labelledby="paidCheckTitle">
+          <button class="pc-modal-close" type="button" data-close-paid aria-label="סגירה">×</button>
+          <span class="home-chip">בדיקה פנסיונית · 49 ₪</span>
+          <h2 id="paidCheckTitle">מתחילים בבדיקה הפנסיונית</h2>
+          <p>השאירו פרטים ולאחר מכן תעברו לעמוד התשלום המאובטח.</p>
+          <form id="paidCheckForm" class="paid-check-form">
+            <label>שם מלא<input name="fullName" required autocomplete="name" placeholder="שם מלא"></label>
+            <label>טלפון<input name="phone" required inputmode="tel" autocomplete="tel" placeholder="05X-XXXXXXX"></label>
+            <label>אימייל<input name="email" type="email" autocomplete="email" placeholder="name@example.com"></label>
+            <label class="checkbox"><input type="checkbox" required name="consent"> אני מאשר/ת שניתן ליצור איתי קשר לצורך הבדיקה</label>
+            <button class="primary paid-submit" type="submit">המשך לתשלום 49 ₪</button>
+            <p class="lead-status" id="paidLeadStatus"></p>
+          </form>
+          <small class="payment-note">התשלום מתבצע בעמוד המאובטח של PayMe.</small>
+        </div>
       </div>
     </section>
   </template>
