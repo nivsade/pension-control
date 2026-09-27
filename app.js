@@ -247,6 +247,7 @@ function renderData(){
     e.preventDefault();
     const fd=new FormData(form); const obj=Object.fromEntries(fd.entries());
     ['pensionBalance','pensionDeposit','pensionAssetFee','pensionDepositFee','studyBalance','studyFee','otherBalance'].forEach(k=>obj[k]=Number(obj[k]||0));
+    ['fundReturn3y','leaderReturn3y','actuarialBalance','leaderActuarialBalance'].forEach(k=>obj[k]=obj[k]===''?null:Number(obj[k]));
     obj.depositsOk=form.elements.depositsOk.checked;
     state.pension=obj; state.reportType='pension'; state.insurance=null; save();
     if(isReal && state.requestId && window.PensionBackend?.configured?.()){
@@ -404,29 +405,82 @@ function renderInsuranceDashboard(){
 }
 
 function scoreEngine(profile,p){
-  let score=100; const insights=[];
-  const add=(level,title,text,points)=>{insights.push({level,title,text}); score-=points||0;};
+  const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
+  const round1=v=>Math.round(v*10)/10;
+  const age=Number(profile.age||0), salary=Number(profile.salary||0);
 
-  if(p.pensionAssetFee>0.25) add('bad','דמי ניהול מצבירה דורשים בדיקה',`דמי הניהול שהזנת הם ${pct(p.pensionAssetFee)}. כדאי להשוות אותם להצעה עדכנית לפני קבלת החלטה.`,10);
-  else add('good','דמי הניהול מצבירה נראים תחרותיים',`דמי ניהול של ${pct(p.pensionAssetFee)} נמצאים בטווח שנראה סביר לבדיקה ראשונית.`,0);
+  // 1) דמי ניהול — 30 נקודות: 15 מהפקדה + 15 מצבירה.
+  // 0.5% ומטה מהפקדה = 15; 6% = 0. 0.05% ומטה מצבירה = 15; 0.5% = 0.
+  const depositFeeScore=round1(15*clamp((6-Number(p.pensionDepositFee||0))/5.5,0,1));
+  const assetFeeScore=round1(15*clamp((0.5-Number(p.pensionAssetFee||0))/0.45,0,1));
+  const feeScore=round1(depositFeeScore+assetFeeScore);
 
-  if(p.pensionDepositFee>1.5) add('warn','דמי הניהול מההפקדה יחסית גבוהים',`אתה משלם ${pct(p.pensionDepositFee)} מההפקדה. שווה לבדוק האם ניתן לשפר את התנאים.`,6);
-  else add('good','דמי הניהול מההפקדה נראים סבירים',`הזנת ${pct(p.pensionDepositFee)} מההפקדה.`,0);
+  // 2) יעד צבירה ביחס לגיל ולשכר — 30 נקודות.
+  // מכפילי היעד: גיל 30=1, 40=3, 50=6, 60=11; בין הגילים אינטרפולציה רציפה.
+  const targetMultiplier=(a)=>{
+    if(!a) return 0;
+    if(a<=20) return 0;
+    if(a<30) return (a-20)/10;
+    if(a<40) return 1+(a-30)*0.2;
+    if(a<50) return 3+(a-40)*0.3;
+    if(a<60) return 6+(a-50)*0.5;
+    return 11;
+  };
+  const mult=targetMultiplier(age);
+  const targetBalance=salary>0?salary*12*mult:0;
+  const fundedRatio=targetBalance>0?Number(p.pensionBalance||0)/targetBalance:0;
+  // סקאלה חכמה: 0,10,20...100% יעד => 0,2,4,7,10,14,18,22,25,28,30.
+  const curve=[[0,0],[.1,2],[.2,4],[.3,7],[.4,10],[.5,14],[.6,18],[.7,22],[.8,25],[.9,28],[1,30]];
+  const curveScore=(ratio)=>{
+    ratio=clamp(ratio,0,1); if(ratio>=1)return 30;
+    for(let i=1;i<curve.length;i++) if(ratio<=curve[i][0]){
+      const [x0,y0]=curve[i-1],[x1,y1]=curve[i]; return y0+(ratio-x0)*(y1-y0)/(x1-x0);
+    } return 30;
+  };
+  const accumulationScore=round1(curveScore(fundedRatio));
 
-  if(p.otherBalance>1000 && p.otherActive==='no') add('warn','נמצאה קופה לא פעילה',`יש ${money(p.otherBalance)} בקופה שסימנת כלא פעילה. לפני איחוד/ניוד צריך לבדוק תנאים, כיסויים ומאפיינים היסטוריים.`,8);
-  if(!p.depositsOk) add('bad','כדאי לבדוק רצף הפקדות',`סימנת שההפקדות האחרונות אינן נראות תקינות. מומלץ להשוות תלושי שכר מול קליטות בפועל.`,12);
-  else add('good','רצף ההפקדות נראה תקין',`לפי הסימון שלך אין כרגע חריגה ידועה בהפקדות האחרונות.`,0);
+  // 3) התאמת מסלול לגיל — 20 נקודות.
+  const track=p.pensionTrack||'general';
+  let trackScore=0;
+  if(track==='general') trackScore=20; // מסלול תלוי גיל נחשב מותאם לקבוצת הגיל.
+  else if(age<50) trackScore=(track==='stocks'||track==='sp500')?20:(track==='bonds'?4:12);
+  else if(age<60) trackScore=(track==='stocks'||track==='sp500')?10:(track==='bonds'?12:17);
+  else trackScore=(track==='bonds')?18:((track==='stocks'||track==='sp500')?4:20);
 
-  const age=Number(profile.age||0);
-  if(age && age<40 && profile.risk==='high' && p.pensionTrack==='bonds') add('warn','המסלול עשוי להיות שמרני ביחס לפרופיל שהגדרת',`בגיל ${age} ובפרופיל סיכון גבוה, מסלול אג"חי מצדיק בדיקה מול אופק ההשקעה שלך.`,7);
-  if(age && age<35 && profile.risk!=='low' && p.studyTrack==='bonds') add('warn','קרן ההשתלמות במסלול שמרני',`בהתאם לגיל ולפרופיל שהזנת, כדאי לפחות לבדוק אם רמת הסיכון תואמת את מועד השימוש בכסף.`,5);
+  // 4) תשואה — 10 נקודות. המוביל = 10; כל 1 נקודת אחוז פער מורידה 2 נקודות.
+  const hasReturn=Number.isFinite(p.fundReturn3y)&&Number.isFinite(p.leaderReturn3y);
+  const returnGap=hasReturn?Math.max(0,p.leaderReturn3y-p.fundReturn3y):null;
+  const returnScore=hasReturn?round1(clamp(10-2*returnGap,0,10)):null;
 
-  const savings=p.pensionBalance+p.studyBalance+p.otherBalance;
-  const annualDeposit=p.pensionDeposit*12;
-  if(profile.salary>0 && p.pensionDeposit>0 && p.pensionDeposit/profile.salary<0.12) add('warn','יחס ההפקדה לשכר נמוך בבדיקה ראשונית',`ההפקדה החודשית שהזנת היא ${money(p.pensionDeposit)} מתוך שכר של ${money(profile.salary)}. ייתכן שחסרים רכיבים או שהוזן נתון חלקי.`,5);
+  // 5) איזון אקטוארי — 5 נקודות. המוביל = 5; 0 או שלילי = 0; חיובי מדורג יחסית למוביל.
+  const hasActuarial=Number.isFinite(p.actuarialBalance)&&Number.isFinite(p.leaderActuarialBalance)&&p.leaderActuarialBalance>0;
+  const actuarialScore=hasActuarial?(p.actuarialBalance<=0?0:round1(5*clamp(p.actuarialBalance/p.leaderActuarialBalance,0,1))):null;
 
-  score=Math.max(35,Math.min(100,Math.round(score)));
-  return {score,insights,savings,annualDeposit};
+  const availableMax=80+(hasReturn?10:0)+(hasActuarial?5:0);
+  const rawTotal=feeScore+accumulationScore+trackScore+(returnScore??0)+(actuarialScore??0);
+  const score=Math.round(rawTotal/availableMax*100);
+
+  const breakdown=[
+    {key:'fees',label:'דמי ניהול',score:feeScore,max:30,detail:`מהפקדה ${depositFeeScore}/15 · מצבירה ${assetFeeScore}/15`},
+    {key:'accumulation',label:'צבירה ביחס לגיל ולשכר',score:accumulationScore,max:30,detail:targetBalance?`${Math.round(fundedRatio*100)}% מיעד של ${money(targetBalance)}`:'נדרשים גיל ושכר לחישוב'},
+    {key:'track',label:'התאמת מסלול לגיל',score:trackScore,max:20,detail:`גיל ${age||'—'} · ${track==='general'?'כללי / תלוי גיל':track==='stocks'?'מניות':track==='sp500'?'S&P 500':'אג״ח / סולידי'}`},
+    {key:'return',label:'תשואה ל־3 שנים',score:returnScore,max:10,detail:hasReturn?`${p.fundReturn3y}% לעומת ${p.leaderReturn3y}% בקרן המובילה`:'לא הוזנו נתוני תשואה'},
+    {key:'actuarial',label:'איזון אקטוארי',score:actuarialScore,max:5,detail:hasActuarial?`${p.actuarialBalance}% לעומת מוביל ${p.leaderActuarialBalance}%`:'לא הוזנו נתוני איזון אקטוארי'}
+  ];
+
+  const insights=[];
+  const add=(level,title,text)=>insights.push({level,title,text});
+  if(feeScore>=25) add('good','דמי הניהול נראים חזקים',`ציון דמי הניהול הוא ${feeScore}/30.`); else if(feeScore>=16) add('warn','יש מקום לשיפור בדמי הניהול',`ציון דמי הניהול הוא ${feeScore}/30. כדאי להשוות תנאים.`); else add('bad','דמי הניהול דורשים בדיקה',`ציון דמי הניהול הוא ${feeScore}/30.`);
+  if(targetBalance) fundedRatio>=.9?add('good','הצבירה קרובה ליעד הגיל והשכר',`הצבירה היא כ־${Math.round(fundedRatio*100)}% מיעד המודל.`):add(fundedRatio>=.6?'warn':'bad','קיים פער מול יעד הצבירה',`הצבירה היא כ־${Math.round(fundedRatio*100)}% מיעד המודל (${money(targetBalance)}).`);
+  trackScore>=17?add('good','המסלול תואם היטב את קבוצת הגיל',`ציון התאמת המסלול הוא ${trackScore}/20.`):add('warn','כדאי לבדוק את התאמת המסלול לגיל',`ציון התאמת המסלול הוא ${trackScore}/20.`);
+  if(hasReturn) returnScore>=8?add('good','התשואה קרובה למובילות במסלול',`ציון התשואה הוא ${returnScore}/10.`):add('warn','קיים פער בתשואה מול המובילה',`ציון התשואה הוא ${returnScore}/10 על בסיס ממוצע 3 שנים.`);
+  if(hasActuarial) actuarialScore>=3.5?add('good','האיזון האקטוארי חיובי יחסית',`ציון האיזון הוא ${actuarialScore}/5.`):add('warn','האיזון האקטוארי נמוך יחסית',`ציון האיזון הוא ${actuarialScore}/5.`);
+  if(p.otherBalance>1000 && p.otherActive==='no') add('warn','נמצאה קופה לא פעילה',`יש ${money(p.otherBalance)} בקופה שסימנת כלא פעילה. לפני איחוד/ניוד צריך לבדוק תנאים וכיסויים.`);
+  if(!p.depositsOk) add('bad','כדאי לבדוק רצף הפקדות','סימנת שההפקדות האחרונות אינן נראות תקינות.');
+
+  const savings=Number(p.pensionBalance||0)+Number(p.studyBalance||0)+Number(p.otherBalance||0);
+  const annualDeposit=Number(p.pensionDeposit||0)*12;
+  return {score,rawTotal,availableMax,breakdown,insights,savings,annualDeposit,targetBalance,fundedRatio};
 }
 
 function scoreLabel(s){ if(s>=85)return ['מצוין','הנתונים נראים חזקים. עדיין כדאי לבצע בדיקה תקופתית.']; if(s>=70)return ['טוב','התמונה הכללית טובה, עם כמה נקודות שכדאי לשפר.']; if(s>=55)return ['דורש תשומת לב','יש מספר נושאים שכדאי לבדוק בצורה מסודרת.']; return ['דורש בדיקה','יש כמה נקודות מהותיות שמצדיקות בדיקה מקצועית.']; }
@@ -494,6 +548,14 @@ function renderDashboard(){
             </div>
           </article>
         </div>
+
+        <section class="score-breakdown-section" id="scoreBreakdown">
+          <div class="section-title-row"><div><span class="card-kicker">איך הציון מחושב?</span><h2>פירוט Pension Score</h2></div><span class="recommendation-count">${r.rawTotal.toFixed(1)}/${r.availableMax} נק׳ זמינות</span></div>
+          <div class="score-breakdown-grid">
+            ${r.breakdown.map(b=>`<article class="score-component ${b.score===null?'score-missing':''}"><div class="score-component-head"><strong>${b.label}</strong><span>${b.score===null?'ממתין לנתון':`${b.score}/${b.max}`}</span></div><div class="score-component-bar"><i style="width:${b.score===null?0:Math.round((b.score/b.max)*100)}%"></i></div><small>${b.detail}</small></article>`).join('')}
+          </div>
+          <p class="score-method-note">הציון הכללי מנורמל ל־100 לפי הרכיבים שעבורם קיימים נתונים. המודל הנוכחי כולל 95 נקודות אפשריות: דמי ניהול 30, צבירה 30, התאמת מסלול 20, תשואה 10 ואיזון אקטוארי 5.</p>
+        </section>
 
         <div class="quick-stats-row">
           <article class="quick-stat-card"><span class="quick-stat-icon">₪</span><div><small>הפקדה שנתית משוערת</small><strong>${money(r.annualDeposit)}</strong></div></article>
