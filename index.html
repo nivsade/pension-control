@@ -111,6 +111,11 @@
         <div><strong>בלי התחייבות</strong><span>אפשר להתחיל בבדיקה מהירה</span></div>
       </div>
 
+      <section class="home-about-subtle section" aria-label="אודות Pension Control">
+        <span class="home-about-mark">PC</span>
+        <p>מאחורי Pension Control עומדת חברה ותיקה המתמחה בתחום הפנסיוני והביטוחי. הניסיון שצברנו בעבודה עם מעסיקים, אנשי מקצוע וחברות הביטוח מאפשר לנו לנתח את הנתונים שלכם, לעשות סדר ולהציג בצורה פשוטה את הנקודות החשובות בתיק.</p>
+      </section>
+
       <section class="home-lead-section section">
         <div class="home-lead-copy"><span class="home-chip">מעדיפים לדבר איתנו?</span><h2>השאירו פרטים ונחזור אליכם</h2><p>לא בטוחים איזו בדיקה מתאימה? השאירו שם וטלפון וניצור קשר.</p><a href="tel:048220228">04-8220228</a></div>
         <form class="home-lead-form" id="homeLeadForm">
@@ -210,21 +215,14 @@
         <div class="mode-pill" id="dataModePill"></div>
         <h2>החיסכון שלך</h2>
         <p class="muted" id="dataIntro">מזינים את הנתונים המרכזיים ומקבלים תמונת מצב.</p>
-        <div class="upload-box" id="uploadBox">
-          <div class="report-upload-head"><div><strong>ניתוח אוטומטי של דוח הר הביטוח</strong><p>העלה קובץ Excel שהופק מהר הביטוח. הקובץ נקרא מקומית בדפדפן ואינו נשלח לשרת בשלב זה.</p></div><span class="local-badge">עיבוד מקומי</span></div>
-          <input id="reportFile" type="file" accept=".xlsx,.xls,.csv" hidden />
-          <button type="button" class="secondary" id="pickFile">בחר דוח הר הביטוח</button>
-          <p id="fileName">Excel — עד 10MB</p>
-          <div id="reportParseStatus" class="report-parse-status hidden"></div>
-          <div id="insurancePreview" class="insurance-preview hidden"></div>
-        </div>
-        <div class="manual-divider"><span>או</span></div><h3 class="manual-title">הזנה ידנית של נתונים פנסיוניים</h3><form id="pensionForm" class="form-grid">
+<h3 class="manual-title">הזנה ידנית של נתונים פנסיוניים</h3><form id="pensionForm" class="form-grid">
           <div class="wide product-title"><h3>קרן פנסיה</h3><span>מוצר מרכזי</span></div>
           <label>יתרה<input required name="pensionBalance" type="number" min="0" step="100" placeholder="312000" /></label>
           <label>הפקדה חודשית<input required name="pensionDeposit" type="number" min="0" step="10" placeholder="3150" /></label>
           <label>דמי ניהול מצבירה (%)<input required name="pensionAssetFee" type="number" min="0" max="2" step="0.01" placeholder="0.18" /></label>
           <label>דמי ניהול מהפקדה (%)<input required name="pensionDepositFee" type="number" min="0" max="8" step="0.01" placeholder="1.10" /></label>
-          <label class="wide">מסלול<select name="pensionTrack"><option value="general">כללי / תלוי גיל</option><option value="stocks">מניות</option><option value="sp500">S&P 500</option><option value="bonds">אג"ח / סולידי</option></select></label>
+          <label>חברת ביטוח / קרן<input name="pensionCompany" type="text" placeholder="לדוגמה: הראל" /></label>
+          <label>מסלול<select name="pensionTrack"><option value="general">כללי / תלוי גיל</option><option value="stocks">מניות</option><option value="sp500">S&P 500</option><option value="bonds">אג"ח / סולידי</option></select></label>
           <label>תשואה שנתית ממוצעת ב־3 שנים (%)<input name="fundReturn3y" type="number" step="0.01" placeholder="8.00" /></label>
           <label>תשואת הקרן המובילה במסלול (%)<input name="leaderReturn3y" type="number" step="0.01" placeholder="9.00" /></label>
           <label>איזון אקטוארי (%)<input name="actuarialBalance" type="number" step="0.01" placeholder="0.18" /></label>
