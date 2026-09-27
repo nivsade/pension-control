@@ -135,18 +135,14 @@ function renderVerification(){
   if(!state.profile) return navigate('onboarding');
   app.appendChild(tpl('verificationTpl'));
   const form=document.getElementById('verificationForm');
-  const panel=form.closest('.panel');
-  const backendBox=document.createElement('div');
-  backendBox.className='backend-status '+(window.PensionBackend?.configured?.()?'ok':'');
-  backendBox.textContent=window.PensionBackend?.configured?.() ? '✓ המערכת מחוברת ל-backend. הבקשה תישמר ותופיע במערכת הניהול.' : 'מצב דמו: עדיין לא הוגדר חיבור ל-Supabase ולכן הפרטים לא יישלחו אליך.';
-  panel.insertBefore(backendBox, form);
   const canvas=document.getElementById('signaturePad');
   const ctx=canvas.getContext('2d');
   let drawing=false, hasSignature=false;
 
   if(state.verification){
     ['fullName','idNumber','idIssueDate','phone','email'].forEach(k=>{ if(form.elements[k] && state.verification[k]) form.elements[k].value=state.verification[k]; });
-    ['consentAccess','consentPrivacy','consentDisclaimer'].forEach(k=>{ if(form.elements[k]) form.elements[k].checked=!!state.verification[k]; });
+    if(form.elements.consentMain) form.elements.consentMain.checked=!!state.verification.consentMain;
+    if(form.elements.consentMarketing) form.elements.consentMarketing.checked=!!state.verification.consentMarketing;
   }
 
   function canvasPoint(e){
@@ -167,9 +163,12 @@ function renderVerification(){
     if(!hasSignature && !state.verification?.signatureProvided){ alert('יש להוסיף חתימה לפני שממשיכים'); return; }
     const fd=new FormData(form);
     const obj=Object.fromEntries(fd.entries());
-    obj.consentAccess=form.elements.consentAccess.checked;
-    obj.consentPrivacy=form.elements.consentPrivacy.checked;
-    obj.consentDisclaimer=form.elements.consentDisclaimer.checked;
+    obj.consentMain=form.elements.consentMain.checked;
+    obj.consentMarketing=form.elements.consentMarketing.checked;
+    // תאימות ל-backend הקיים: אישור אחד מכסה את שלוש הסכמות החובה.
+    obj.consentAccess=obj.consentMain;
+    obj.consentPrivacy=obj.consentMain;
+    obj.consentDisclaimer=obj.consentMain;
     obj.signatureProvided=true;
     obj.signatureDataUrl=canvas.toDataURL('image/png');
     state.verification=obj;
@@ -218,14 +217,13 @@ function renderData(){
   const intro=document.getElementById('dataIntro');
   if(step) step.textContent=isReal?'בדיקת אמת · שלב 3 מתוך 4':'בדיקה אנונימית · שלב 2 מתוך 3';
   if(pill){ pill.textContent=isReal?'בדיקת התיק הפנסיוני והביטוחי':'בדיקה אנונימית'; pill.classList.add(isReal?'real-pill':'anon-pill'); }
-  if(intro) intro.textContent=isReal?'העלה דוח אמיתי והזן את הנתונים המרכזיים ממנו. בגרסת ה-MVP הניתוח מתבצע על הנתונים שהוזנו; חיבור אוטומטי למסלקה יתווסף ב-backend.':'אין צורך בשם, ת״ז או פרטי קשר. הזן את הנתונים שברשותך כדי לקבל הערכה ראשונית.';
+  if(intro) intro.textContent=isReal?'הנתונים ייקלטו במסגרת הבדיקה ויוצגו לאחר השלמת התהליך.':'אין צורך בשם, ת״ז או פרטי קשר. הזן את הנתונים שברשותך כדי לקבל הערכה ראשונית.';
   const form=document.getElementById('pensionForm');
   if(state.pension){ Object.entries(state.pension).forEach(([k,v])=>{ const el=form.elements[k]; if(!el)return; if(el.type==='checkbox')el.checked=!!v; else el.value=v; }); }
   form.addEventListener('submit',e=>{
     e.preventDefault();
     const fd=new FormData(form); const obj=Object.fromEntries(fd.entries());
     ['pensionBalance','pensionDeposit','pensionAssetFee','pensionDepositFee','studyBalance','studyFee','otherBalance'].forEach(k=>obj[k]=Number(obj[k]||0));
-    ['fundReturn3y','leaderReturn3y','actuarialBalance','leaderActuarialBalance'].forEach(k=>obj[k]=obj[k]===''?null:Number(obj[k]));
     obj.depositsOk=form.elements.depositsOk.checked;
     state.pension=obj; state.reportType='pension'; state.insurance=null; save();
     if(isReal && state.requestId && window.PensionBackend?.configured?.()){
@@ -387,55 +385,29 @@ function scoreEngine(profile,p){
   const round1=v=>Math.round(v*10)/10;
   const age=Number(profile.age||0), salary=Number(profile.salary||0);
 
-  // 1) דמי ניהול — 30 נקודות: 15 מהפקדה + 15 מצבירה.
-  // 0.5% ומטה מהפקדה = 15; 6% = 0. 0.05% ומטה מצבירה = 15; 0.5% = 0.
+  // דמי ניהול בקרן הפנסיה — 30 נקודות פנימיות.
   const depositFeeScore=round1(15*clamp((6-Number(p.pensionDepositFee||0))/5.5,0,1));
   const assetFeeScore=round1(15*clamp((0.5-Number(p.pensionAssetFee||0))/0.45,0,1));
   const feeScore=round1(depositFeeScore+assetFeeScore);
 
-  // 2) יעד צבירה ביחס לגיל ולשכר — 30 נקודות.
-  // מכפילי היעד: גיל 30=1, 40=3, 50=6, 60=11; בין הגילים אינטרפולציה רציפה.
-  const targetMultiplier=(a)=>{
-    if(!a) return 0;
-    if(a<=20) return 0;
-    if(a<30) return (a-20)/10;
-    if(a<40) return 1+(a-30)*0.2;
-    if(a<50) return 3+(a-40)*0.3;
-    if(a<60) return 6+(a-50)*0.5;
-    return 11;
-  };
-  const mult=targetMultiplier(age);
-  const targetBalance=salary>0?salary*12*mult:0;
-  const fundedRatio=targetBalance>0?Number(p.pensionBalance||0)/targetBalance:0;
-  // סקאלה חכמה: 0,10,20...100% יעד => 0,2,4,7,10,14,18,22,25,28,30.
-  const curve=[[0,0],[.1,2],[.2,4],[.3,7],[.4,10],[.5,14],[.6,18],[.7,22],[.8,25],[.9,28],[1,30]];
-  const curveScore=(ratio)=>{
-    ratio=clamp(ratio,0,1); if(ratio>=1)return 30;
-    for(let i=1;i<curve.length;i++) if(ratio<=curve[i][0]){
-      const [x0,y0]=curve[i-1],[x1,y1]=curve[i]; return y0+(ratio-x0)*(y1-y0)/(x1-x0);
-    } return 30;
-  };
-  const accumulationScore=round1(curveScore(fundedRatio));
-
-  // 3) התאמת מסלול לגיל — 20 נקודות.
+  // התאמת מסלול לגיל — 20 נקודות פנימיות.
   const track=p.pensionTrack||'general';
   let trackScore=0;
-  if(track==='general') trackScore=20; // מסלול תלוי גיל נחשב מותאם לקבוצת הגיל.
+  if(track==='general') trackScore=20;
   else if(age<50) trackScore=(track==='stocks'||track==='sp500')?20:(track==='bonds'?4:12);
   else if(age<60) trackScore=(track==='stocks'||track==='sp500')?10:(track==='bonds'?12:17);
   else trackScore=(track==='bonds')?18:((track==='stocks'||track==='sp500')?4:20);
 
-  // 4) תשואה — 10 נקודות. המוביל = 10; כל 1 נקודת אחוז פער מורידה 2 נקודות.
+  // תשואה — 10 נקודות פנימיות.
   const hasReturn=Number.isFinite(p.fundReturn3y)&&Number.isFinite(p.leaderReturn3y);
   const returnGap=hasReturn?Math.max(0,p.leaderReturn3y-p.fundReturn3y):null;
   const returnScore=hasReturn?round1(clamp(10-2*returnGap,0,10)):null;
 
-  // 5) איזון אקטוארי — 5 נקודות. המוביל = 5; 0 או שלילי = 0; חיובי מדורג יחסית למוביל.
+  // איזון אקטוארי — 5 נקודות פנימיות.
   const hasActuarial=Number.isFinite(p.actuarialBalance)&&Number.isFinite(p.leaderActuarialBalance)&&p.leaderActuarialBalance>0;
   const actuarialScore=hasActuarial?(p.actuarialBalance<=0?0:round1(5*clamp(p.actuarialBalance/p.leaderActuarialBalance,0,1))):null;
 
-  // 6) יחס הפקדות — 5 נקודות. היחס מחושב כהפקדה חודשית כוללת / שכר חודשי.
-  // 18.5% ומעלה = 5/5; מתחת לכך הציון יורד בהדרגה לפי נקודות ייחוס.
+  // יחס הפקדות — 5 נקודות פנימיות.
   const depositRatio=salary>0?Number(p.pensionDeposit||0)/salary:0;
   const depositCurve=[[0,0],[.04,1],[.08,2],[.12,3],[.15,4],[.185,5]];
   const depositRatioScore=(()=>{
@@ -445,33 +417,57 @@ function scoreEngine(profile,p){
     } return 5;
   })();
 
-  const availableMax=85+(hasReturn?10:0)+(hasActuarial?5:0);
-  const rawTotal=feeScore+accumulationScore+trackScore+depositRatioScore+(returnScore??0)+(actuarialScore??0);
-  const score=Math.round(rawTotal/availableMax*100);
+  // קרן השתלמות — נכנסת לציון רק אם קיימת. 0.5% ומטה = 15/15, 1% = 5/15, 1.5% ומעלה = 0.
+  const hasStudy=Number(p.studyBalance||0)>0 || (p.studyTrack && p.studyTrack!=='none') || (p.studyFee!=='' && p.studyFee!==null && Number.isFinite(Number(p.studyFee)) && Number(p.studyFee)>0);
+  const studyFee=Number(p.studyFee||0);
+  let studyScore=null;
+  if(hasStudy){
+    if(studyFee<=0.5) studyScore=15;
+    else if(studyFee<=1) studyScore=round1(15-(studyFee-.5)*20); // 0.5=>15, 1=>5
+    else if(studyFee<1.5) studyScore=round1(5-(studyFee-1)*10);  // 1=>5, 1.5=>0
+    else studyScore=0;
+  }
+
+  // פער מול יעד צבירה הוסר לחלוטין מהציון. הציון הכולל מנורמל רק מהרכיבים הזמינים.
+  const components=[
+    [feeScore,30], [trackScore,20], [depositRatioScore,5],
+    ...(hasReturn?[[returnScore,10]]:[]),
+    ...(hasActuarial?[[actuarialScore,5]]:[]),
+    ...(hasStudy?[[studyScore,15]]:[])
+  ];
+  const rawTotal=components.reduce((a,[v])=>a+v,0);
+  const availableMax=components.reduce((a,[,m])=>a+m,0);
+  const score=availableMax?Math.round(rawTotal/availableMax*100):0;
 
   const breakdown=[
-    {key:'fees',label:'דמי ניהול',score:feeScore,max:30,detail:`מהפקדה ${depositFeeScore}/15 · מצבירה ${assetFeeScore}/15`},
-    {key:'accumulation',label:'צבירה ביחס לגיל ולשכר',score:accumulationScore,max:30,detail:targetBalance?`${Math.round(fundedRatio*100)}% מיעד של ${money(targetBalance)}`:'נדרשים גיל ושכר לחישוב'},
-    {key:'track',label:'התאמת מסלול לגיל',score:trackScore,max:20,detail:`גיל ${age||'—'} · ${track==='general'?'כללי / תלוי גיל':track==='stocks'?'מניות':track==='sp500'?'S&P 500':'אג״ח / סולידי'}`},
-    {key:'return',label:'תשואה ל־3 שנים',score:returnScore,max:10,detail:hasReturn?`${p.fundReturn3y}% לעומת ${p.leaderReturn3y}% בקרן המובילה`:'לא הוזנו נתוני תשואה'},
-    {key:'actuarial',label:'איזון אקטוארי',score:actuarialScore,max:5,detail:hasActuarial?`${p.actuarialBalance}% לעומת מוביל ${p.leaderActuarialBalance}%`:'לא הוזנו נתוני איזון אקטוארי'},
-    {key:'depositRatio',label:'יחס הפקדות',score:depositRatioScore,max:5,detail:salary?`${(depositRatio*100).toFixed(1)}% מהשכר · ${money(p.pensionDeposit)} בחודש`:'נדרש שכר לחישוב'}
+    {key:'fees',label:'דמי ניהול',score:feeScore,max:30},
+    {key:'track',label:'התאמת מסלול לגיל',score:trackScore,max:20},
+    {key:'return',label:'תשואה ל־3 שנים',score:returnScore,max:10},
+    {key:'actuarial',label:'איזון אקטוארי',score:actuarialScore,max:5},
+    {key:'depositRatio',label:'יחס הפקדות',score:depositRatioScore,max:5},
+    {key:'study',label:'קרן השתלמות',score:studyScore,max:15}
   ];
 
   const insights=[];
   const add=(level,title,text)=>insights.push({level,title,text});
-  if(feeScore>=25) add('good','דמי הניהול נראים טובים','דמי הניהול נמצאים ברמה טובה לפי טווחי הבדיקה.'); else if(feeScore>=16) add('warn','יש מקום לשיפור בדמי הניהול','התנאים סבירים, אך כדאי להשוות מול חלופות ולבדוק אפשרות לשיפור.'); else add('bad','דמי הניהול דורשים תשומת לב','דמי הניהול גבוהים יחסית לטווחים שהוגדרו במודל וכדאי לבדוק אותם.');
-  if(targetBalance) fundedRatio>=.9?add('good','הצבירה קרובה ליעד הגיל והשכר',`הצבירה היא כ־${Math.round(fundedRatio*100)}% מיעד המודל.`):add(fundedRatio>=.6?'warn':'bad','קיים פער מול יעד הצבירה',`הצבירה היא כ־${Math.round(fundedRatio*100)}% מיעד המודל (${money(targetBalance)}).`);
+  if(feeScore>=25) add('good','דמי הניהול נראים טובים','דמי הניהול נמצאים ברמה טובה לפי טווחי הבדיקה.'); else if(feeScore>=16) add('warn','יש מקום לשיפור בדמי הניהול','התנאים סבירים, אך כדאי להשוות ולבדוק אפשרות לשיפור.'); else add('bad','דמי הניהול דורשים תשומת לב','דמי הניהול גבוהים יחסית לטווחים שהוגדרו במודל וכדאי לבדוק אותם.');
   trackScore>=17?add('good','מסלול ההשקעה נראה מתאים לגיל','רמת הסיכון במסלול תואמת את עקרונות המודל לקבוצת הגיל שלך.'):add(trackScore>=10?'warn':'bad','כדאי לבדוק את התאמת המסלול לגיל','רמת הסיכון במסלול עשויה להיות פחות מתאימה לאופק החיסכון שלך.');
   if(hasReturn) returnScore>=8?add('good','התשואה נראית טובה ביחס להשוואה','ממוצע התשואה שנבדק קרוב לקרנות המובילות במסלול ההשוואה.'):add(returnScore>=5?'warn':'bad','קיים פער בתשואה מול ההשוואה','ממוצע התשואה ב־3 השנים שנבדקו נמוך יחסית למובילות במסלול ההשוואה.');
   if(hasActuarial) actuarialScore>=3.5?add('good','האיזון האקטוארי נראה טוב','האיזון האקטוארי חיובי ונמצא ברמה טובה ביחס להשוואה.'):add(actuarialScore>0?'warn':'bad','האיזון האקטוארי דורש בדיקה',p.actuarialBalance<=0?'האיזון האקטוארי אינו חיובי בתקופה שנבדקה.':'האיזון האקטוארי חיובי אך נמוך יחסית למוביל בהשוואה.');
   depositRatioScore>=4?add('good','יחס ההפקדות נראה תקין',`ההפקדה החודשית היא כ־${(depositRatio*100).toFixed(1)}% מהשכר.`):add('warn','כדאי לבדוק את יחס ההפקדות',`ההפקדה החודשית היא כ־${(depositRatio*100).toFixed(1)}% מהשכר.`);
-  if(p.otherBalance>1000 && p.otherActive==='no') add('warn','נמצאה קופה לא פעילה',`יש ${money(p.otherBalance)} בקופה שסימנת כלא פעילה. לפני איחוד/ניוד צריך לבדוק תנאים וכיסויים.`);
+  if(hasStudy){
+    if(studyScore>=12) add('good','דמי הניהול בקרן ההשתלמות טובים','דמי הניהול בקרן ההשתלמות נמצאים ברמה טובה לפי טווחי הבדיקה.');
+    else if(studyScore>=5) add('warn','כדאי לבדוק את דמי הניהול בקרן ההשתלמות','ייתכן שיש מקום לשיפור בדמי הניהול של קרן ההשתלמות.');
+    else add('bad','דמי הניהול בקרן ההשתלמות גבוהים','כדאי לבדוק אפשרות לשיפור התנאים בקרן ההשתלמות.');
+  } else {
+    add('warn','לא נמצאה קרן השתלמות','אם קיימת עבורך אפשרות או זכאות לקרן השתלמות, כדאי לבדוק האם נכון לנצל אותה כחלק מהחיסכון לטווח הבינוני.');
+  }
+  if(p.otherBalance>1000 && p.otherActive==='no') add('warn','נמצאה קופה לא פעילה',`יש ${money(p.otherBalance)} בקופה שסימנת כלא פעילה. לפני איחוד או ניוד צריך לבדוק תנאים וכיסויים.`);
   if(!p.depositsOk) add('bad','כדאי לבדוק רצף הפקדות','סימנת שההפקדות האחרונות אינן נראות תקינות.');
 
   const savings=Number(p.pensionBalance||0)+Number(p.studyBalance||0)+Number(p.otherBalance||0);
   const annualDeposit=Number(p.pensionDeposit||0)*12;
-  return {score,rawTotal,availableMax,breakdown,insights,savings,annualDeposit,targetBalance,fundedRatio};
+  return {score,rawTotal,availableMax,breakdown,insights,savings,annualDeposit};
 }
 
 function scoreLabel(s){ if(s>=85)return ['מצוין','הנתונים נראים חזקים. עדיין כדאי לבצע בדיקה תקופתית.']; if(s>=70)return ['טוב','התמונה הכללית טובה, עם כמה נקודות שכדאי לשפר.']; if(s>=55)return ['דורש תשומת לב','יש מספר נושאים שכדאי לבדוק בצורה מסודרת.']; return ['דורש בדיקה','יש כמה נקודות מהותיות שמצדיקות בדיקה מקצועית.']; }
@@ -591,7 +587,7 @@ function renderDashboard(){
           </div>
         </section>
 
-        <div class="disclaimer modern-disclaimer"><strong>חשוב:</strong> ${isReal?'בדיקת האמת ב-MVP מבוססת על מידע אמיתי שהוזן/הועלה, אך עדיין אין משיכת נתונים אוטומטית מהמסלקה.':'הבדיקה האנונימית היא הערכה ראשונית ואינה מאמתת את הנתונים מול גוף חיצוני.'} אין כאן המלצה לבצע ניוד, שינוי מסלול, ביטול מוצר או רכישת מוצר פיננסי.</div>
+        <div class="disclaimer modern-disclaimer"><strong>חשוב:</strong> התוצאה נועדה להצגת תמונת מצב כללית. אין כאן המלצה לבצע ניוד, שינוי מסלול, ביטול מוצר או רכישת מוצר פיננסי.</div>
       </div>
     </div>
   `;

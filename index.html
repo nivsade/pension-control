@@ -26,7 +26,7 @@
     <main id="app" tabindex="-1"></main>
 
     <footer>
-      <p>גרסת MVP להמחשה בלבד. המידע במערכת אינו ייעוץ פנסיוני, שיווק פנסיוני או ייעוץ השקעות.</p>
+      <p>המידע במערכת נועד להצגת תמונת מצב כללית ואינו מהווה ייעוץ פנסיוני, שיווק פנסיוני או ייעוץ השקעות.</p>
     </footer>
   </div>
 
@@ -177,8 +177,7 @@
         <span class="eyebrow">בדיקת אמת · שלב 2 מתוך 4</span>
         <div class="mode-pill real-pill">בדיקת אמת</div>
         <h2>הרשאה וזיהוי</h2>
-        <p class="muted">הפרטים נועדו לאפשר בהמשך קבלת מידע פנסיוני מדויק בכפוף להסכמתך. בגרסת ה-MVP אין חיבור למסלקה או לגוף חיצוני והמידע אינו נשלח מהדפדפן.</p>
-        <div class="privacy-alert"><strong>חשוב:</strong> זהו עדיין MVP. לפני שימוש מסחרי בפרטים מזהים אמיתיים נחבר backend מאובטח, הצפנה, הרשאות ובקרת גישה. בשלב זה מומלץ להשתמש בנתוני בדיקה בלבד.</div>
+        <p class="muted">הפרטים משמשים לצורך ביצוע הבדיקה, ריכוז המידע והצגת התוצאות בהתאם להרשאה שלך.</p>
         <form id="verificationForm" class="form-grid">
           <label>שם מלא<input required name="fullName" autocomplete="name" placeholder="ישראל ישראלי" /></label>
           <label>מספר תעודת זהות<input required name="idNumber" inputmode="numeric" maxlength="9" pattern="[0-9]{5,9}" placeholder="123456789" /></label>
@@ -193,13 +192,8 @@
           </div>
 
           <div class="wide consent-box">
-            <label class="checkbox"><input required type="checkbox" name="consentAccess" /> אני מאשר/ת להשתמש בפרטים שמסרתי לצורך קבלת, ריכוז והצגת המידע הפנסיוני והביטוחי שלי, בכפוף לדין ולהרשאות הנדרשות.</label>
-            <label class="checkbox"><input required type="checkbox" name="consentPrivacy" /> קראתי והבנתי כי המידע האישי והפיננסי הוא מידע רגיש וכי בגרסה מסחרית יוצגו מדיניות פרטיות, אבטחת מידע, מטרות השימוש ותקופת השמירה.</label>
-            <label class="checkbox"><input required type="checkbox" name="consentDisclaimer" /> ידוע לי שהמערכת מספקת תמונת מצב וכלי עזר בלבד ואינה מהווה ייעוץ פנסיוני, שיווק פנסיוני או ייעוץ השקעות.</label>
-          </div>
-          <div class="wide disclosure">
-            <strong>גילוי נאות מקוצר</strong>
-            <p>ההרשאה מיועדת לצורך איסוף והצגת מידע שהמשתמש ביקש לקבל. אין בעצם הצגת הנתונים המלצה לבצע ניוד, שינוי מסלול, ביטול מוצר, רכישת ביטוח או השקעה. לפני הפעלה מסחרית יש להתאים את נוסח ההסכמה, הפרטיות וההרשאה למסגרת המשפטית והרגולטורית החלה בפועל.</p>
+            <label class="checkbox"><input required type="checkbox" name="consentMain" /> אני מאשר/ת להשתמש בפרטים שמסרתי לצורך קבלת, ריכוז והצגת המידע הפנסיוני והביטוחי שלי, ומאשר/ת שקראתי את תנאי השימוש, מדיניות הפרטיות והגילוי הנאות. ידוע לי שהמערכת מספקת תמונת מצב וכלי עזר ואינה מהווה ייעוץ פנסיוני, שיווק פנסיוני או ייעוץ השקעות.</label>
+            <label class="checkbox"><input type="checkbox" name="consentMarketing" /> אני מסכים/ה לקבל עדכונים, מידע מקצועי ודיוור שיווקי באמצעי הקשר שמסרתי. ניתן להסיר את ההסכמה בכל עת.</label>
           </div>
           <div class="wide action-line"><button type="button" class="ghost" data-go="onboarding">חזרה</button><button class="primary" type="submit">אישור והמשך</button></div>
         </form>
@@ -223,10 +217,6 @@
           <label>דמי ניהול מהפקדה (%)<input required name="pensionDepositFee" type="number" min="0" max="8" step="0.01" placeholder="1.10" /></label>
           <label>חברת ביטוח / קרן<input name="pensionCompany" type="text" placeholder="לדוגמה: הראל" /></label>
           <label>מסלול<select name="pensionTrack"><option value="general">כללי / תלוי גיל</option><option value="stocks">מניות</option><option value="sp500">S&P 500</option><option value="bonds">אג"ח / סולידי</option></select></label>
-          <label>תשואה שנתית ממוצעת ב־3 שנים (%)<input name="fundReturn3y" type="number" step="0.01" placeholder="8.00" /></label>
-          <label>תשואת הקרן המובילה במסלול (%)<input name="leaderReturn3y" type="number" step="0.01" placeholder="9.00" /></label>
-          <label>איזון אקטוארי (%)<input name="actuarialBalance" type="number" step="0.01" placeholder="0.18" /></label>
-          <label>האיזון האקטוארי המוביל (%)<input name="leaderActuarialBalance" type="number" step="0.01" placeholder="0.30" /></label>
 
           <div class="wide divider"></div>
           <div class="wide product-title"><h3>קרן השתלמות</h3><span>אופציונלי</span></div>
