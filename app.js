@@ -393,7 +393,7 @@ function scoreEngine(profile,p){
   // התאמת מסלול לגיל — 20 נקודות פנימיות.
   const track=p.pensionTrack||'general';
   let trackScore=0;
-  if(track==='general') trackScore=20;
+  if(track==='general') trackScore=age<40?14:20;
   else if(age<50) trackScore=(track==='stocks'||track==='sp500')?20:(track==='bonds'?4:12);
   else if(age<60) trackScore=(track==='stocks'||track==='sp500')?10:(track==='bonds'?12:17);
   else trackScore=(track==='bonds')?18:((track==='stocks'||track==='sp500')?4:20);
@@ -411,7 +411,10 @@ function scoreEngine(profile,p){
   const depositRatio=salary>0?Number(p.pensionDeposit||0)/salary:0;
   const depositCurve=[[0,0],[.04,1],[.08,2],[.12,3],[.15,4],[.185,5]];
   const depositRatioScore=(()=>{
-    const ratio=clamp(depositRatio,0,.185); if(ratio>=.185)return 5;
+    // הטווח התקין במודל: 18.5%–22.83%. חריגה כלפי מעלה מסומנת כלא תקינה.
+    if(depositRatio>.2283) return 0;
+    if(depositRatio>=.185) return 5;
+    const ratio=clamp(depositRatio,0,.185);
     for(let i=1;i<depositCurve.length;i++) if(ratio<=depositCurve[i][0]){
       const [x0,y0]=depositCurve[i-1],[x1,y1]=depositCurve[i]; return round1(y0+(ratio-x0)*(y1-y0)/(x1-x0));
     } return 5;
@@ -451,10 +454,13 @@ function scoreEngine(profile,p){
   const insights=[];
   const add=(level,title,text)=>insights.push({level,title,text});
   if(feeScore>=25) add('good','דמי הניהול נראים טובים','דמי הניהול נמצאים ברמה טובה לפי טווחי הבדיקה.'); else if(feeScore>=16) add('warn','יש מקום לשיפור בדמי הניהול','התנאים סבירים, אך כדאי להשוות ולבדוק אפשרות לשיפור.'); else add('bad','דמי הניהול דורשים תשומת לב','דמי הניהול גבוהים יחסית לטווחים שהוגדרו במודל וכדאי לבדוק אותם.');
-  trackScore>=17?add('good','מסלול ההשקעה נראה מתאים לגיל','רמת הסיכון במסלול תואמת את עקרונות המודל לקבוצת הגיל שלך.'):add(trackScore>=10?'warn':'bad','כדאי לבדוק את התאמת המסלול לגיל','רמת הסיכון במסלול עשויה להיות פחות מתאימה לאופק החיסכון שלך.');
+  if(age<40 && track==='general') add('warn','אפשר לשקול מסלול השקעה אחר','בגיל מתחת ל־40 ובאופק חיסכון ארוך, אפשר לשקול לבדוק גם מסלול מנייתי או מסלול בעל חשיפה גבוהה יותר למניות, בהתאם לצרכים ולרמת הסיכון המתאימה לך.');
+  else trackScore>=17?add('good','מסלול ההשקעה נראה מתאים לגיל','רמת הסיכון במסלול תואמת את עקרונות המודל לקבוצת הגיל שלך.'):add(trackScore>=10?'warn':'bad','כדאי לבדוק את התאמת המסלול לגיל','רמת הסיכון במסלול עשויה להיות פחות מתאימה לאופק החיסכון שלך.');
   if(hasReturn) returnScore>=8?add('good','התשואה נראית טובה ביחס להשוואה','ממוצע התשואה שנבדק קרוב לקרנות המובילות במסלול ההשוואה.'):add(returnScore>=5?'warn':'bad','קיים פער בתשואה מול ההשוואה','ממוצע התשואה ב־3 השנים שנבדקו נמוך יחסית למובילות במסלול ההשוואה.');
   if(hasActuarial) actuarialScore>=3.5?add('good','האיזון האקטוארי נראה טוב','האיזון האקטוארי חיובי ונמצא ברמה טובה ביחס להשוואה.'):add(actuarialScore>0?'warn':'bad','האיזון האקטוארי דורש בדיקה',p.actuarialBalance<=0?'האיזון האקטוארי אינו חיובי בתקופה שנבדקה.':'האיזון האקטוארי חיובי אך נמוך יחסית למוביל בהשוואה.');
-  depositRatioScore>=4?add('good','יחס ההפקדות נראה תקין',`ההפקדה החודשית היא כ־${(depositRatio*100).toFixed(1)}% מהשכר.`):add('warn','כדאי לבדוק את יחס ההפקדות',`ההפקדה החודשית היא כ־${(depositRatio*100).toFixed(1)}% מהשכר.`);
+  if(depositRatio>.2283) add('bad','יחס ההפקדות גבוה מהטווח התקין',`ההפקדה החודשית היא כ־${(depositRatio*100).toFixed(1)}% מהשכר. במודל הבדיקה הטווח התקין הוא 18.5%–22.83%, ולכן כדאי לבדוק את הנתונים ואת רכיבי ההפקדה.`);
+  else if(depositRatio>=.185) add('good','יחס ההפקדות נראה תקין',`ההפקדה החודשית היא כ־${(depositRatio*100).toFixed(1)}% מהשכר ונמצאת בטווח 18.5%–22.83%.`);
+  else add('warn','כדאי לבדוק את יחס ההפקדות',`ההפקדה החודשית היא כ־${(depositRatio*100).toFixed(1)}% מהשכר.`);
   if(hasStudy){
     if(studyScore>=12) add('good','דמי הניהול בקרן ההשתלמות טובים','דמי הניהול בקרן ההשתלמות נמצאים ברמה טובה לפי טווחי הבדיקה.');
     else if(studyScore>=5) add('warn','כדאי לבדוק את דמי הניהול בקרן ההשתלמות','ייתכן שיש מקום לשיפור בדמי הניהול של קרן ההשתלמות.');
@@ -580,6 +586,16 @@ function renderDashboard(){
           </div>
         </section>
 
+        ${!isReal?`<section class="quick-result-lead" aria-label="השארת פרטים לאחר הבדיקה המהירה">
+          <div><span class="card-kicker">רוצה שנעזור לעשות סדר?</span><h2>השאירו פרטים ונחזור אליכם</h2><p>אפשר להשאיר שם וטלפון בלבד. נחזור אליכם כדי לעבור על התוצאה והנקודות שכדאי לבדוק.</p></div>
+          <form id="quickResultLeadForm" class="quick-result-lead-form">
+            <label>שם מלא<input name="fullName" required autocomplete="name" placeholder="שם מלא"></label>
+            <label>טלפון<input name="phone" required inputmode="tel" autocomplete="tel" placeholder="05X-XXXXXXX"></label>
+            <button class="primary" type="submit">חזרו אליי</button>
+            <p class="lead-status" id="quickResultLeadStatus" aria-live="polite"></p>
+          </form>
+        </section>`:''}
+
         <section class="all-insights-section">
           <div class="section-title-row"><div><span class="card-kicker">פירוט מלא</span><h2>כל התובנות</h2></div></div>
           <div class="insight-list modern-insights">
@@ -595,6 +611,21 @@ function renderDashboard(){
   document.getElementById('editData')?.addEventListener('click',()=>navigate('data'));
   document.getElementById('editDataSide')?.addEventListener('click',()=>navigate('data'));
   document.getElementById('newCheckSide')?.addEventListener('click',()=>navigate('home'));
+  const quickLead=document.getElementById('quickResultLeadForm');
+  quickLead?.addEventListener('submit',async e=>{
+    e.preventDefault();
+    const st=document.getElementById('quickResultLeadStatus');
+    const btn=quickLead.querySelector('button[type=submit]');
+    const fd=new FormData(quickLead);
+    btn.disabled=true; if(st) st.textContent='שולח…';
+    try{
+      if(!window.PensionBackend?.configured()) throw new Error('BACKEND_NOT_CONFIGURED');
+      await window.PensionBackend.callFunction({action:'submit_lead',source:'quick_result_callback',fullName:String(fd.get('fullName')||''),phone:String(fd.get('phone')||''),email:'',idNumber:'',idIssueDate:''});
+      if(st) st.textContent='הפרטים התקבלו ✓ נחזור אליכם בהקדם.';
+      quickLead.reset();
+    }catch(_){ if(st) st.textContent='לא הצלחנו לשלוח כרגע. אפשר להתקשר ל־04-8220228.'; }
+    finally{btn.disabled=false;}
+  });
   document.querySelectorAll('[data-dash-target]').forEach(btn=>btn.addEventListener('click',()=>{
     document.querySelectorAll('.client-nav-item').forEach(x=>x.classList.remove('active'));
     btn.classList.add('active');

@@ -140,3 +140,33 @@
 .fund-identity-card h2{margin:5px 0 0;font-size:23px;color:#172554}.fund-identity-meta{display:flex;align-items:center;gap:10px;background:#f5f8ff;padding:10px 14px;border-radius:14px}.fund-identity-meta span{font-size:12px;color:#64748b}.fund-identity-meta strong{font-size:14px;color:#1e3a8a}
 .status-overview-section{margin:22px 0 30px}.status-overview-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.status-card{background:#fff;border:1px solid #e5eaf3;border-radius:18px;padding:17px 18px;display:grid;grid-template-columns:auto 1fr;gap:12px;align-items:start}.status-dot{width:11px;height:11px;border-radius:50%;margin-top:5px}.status-card.good{border-right:4px solid #32a66a}.status-card.good .status-dot{background:#32a66a}.status-card.warn{border-right:4px solid #e8a23a}.status-card.warn .status-dot{background:#e8a23a}.status-card.bad{border-right:4px solid #dc5252}.status-card.bad .status-dot{background:#dc5252}.status-card h3{margin:0 0 6px;font-size:16px;color:#1e293b}.status-card p{margin:0;color:#64748b;line-height:1.55;font-size:13px}
 @media(max-width:700px){.fund-identity-card{align-items:flex-start;flex-direction:column}.status-overview-grid{grid-template-columns:1fr}}
+
+/* V17 — quick-result lead + tighter mobile home */
+.quick-result-lead{display:grid;grid-template-columns:1fr 1fr;gap:28px;align-items:center;margin:24px 0;padding:26px 28px;border:1px solid #dbe7f7;border-radius:24px;background:linear-gradient(135deg,#f5f9ff,#fff);box-shadow:0 14px 38px rgba(24,74,160,.06)}
+.quick-result-lead h2{margin:7px 0 8px;color:#17396e;font-size:27px}.quick-result-lead p{margin:0;color:#687d9d;line-height:1.55}.quick-result-lead-form{display:grid;grid-template-columns:1fr 1fr auto;gap:10px;align-items:end}.quick-result-lead-form label{display:grid;gap:6px;font-weight:750;color:#29466f}.quick-result-lead-form input{width:100%;padding:12px 13px;border:1px solid #cfddf1;border-radius:12px;background:#fff}.quick-result-lead-form button{height:44px;white-space:nowrap}.quick-result-lead-form .lead-status{grid-column:1/-1;min-height:18px;font-size:13px;color:#18794e}
+@media(max-width:760px){.quick-result-lead{grid-template-columns:1fr;padding:20px}.quick-result-lead-form{grid-template-columns:1fr 1fr}.quick-result-lead-form button{grid-column:1/-1}.quick-result-lead h2{font-size:24px}}
+
+@media(max-width:650px){
+  .home-blue-hero{display:flex;flex-direction:column;width:calc(100% - 20px);padding-top:18px;gap:12px;align-items:stretch}
+  .home-blue-copy{display:contents;text-align:center}
+  .home-chip{order:1;align-self:center}
+  .home-blue-copy h1{order:2;font-size:31px;line-height:1.08;letter-spacing:-.7px;margin:2px auto 0;max-width:360px}
+  .home-blue-lead{order:3;font-size:14px;line-height:1.45;margin:0 auto;max-width:360px}
+  .home-dashboard-preview{order:4;min-height:0;width:100%;margin:4px auto 2px;display:block}
+  .preview-dashboard-card{width:100%;max-width:390px;margin:auto;padding:14px;border-radius:20px;transform:none;box-shadow:0 18px 42px rgba(24,74,160,.14)}
+  .preview-dashboard-head{margin-bottom:10px;align-items:center}.preview-dashboard-head span{font-size:11px;margin-bottom:2px}.preview-dashboard-head strong{font-size:21px}.preview-pill{padding:5px 8px;font-size:10px!important}
+  .preview-main-grid{grid-template-columns:auto 1fr;gap:12px}.preview-donut{width:104px}.preview-donut:after{inset:17px}.preview-donut strong{font-size:15px}.preview-donut small{font-size:9px}.preview-legend{display:grid;gap:7px;font-size:10px}.preview-legend div{gap:5px}.preview-legend i{width:7px;height:7px}.preview-mini-stats{grid-template-columns:repeat(3,1fr);gap:6px;margin-top:10px}.preview-mini-stats>div{padding:8px 5px;border-radius:10px}.preview-mini-stats small{font-size:9px}.preview-mini-stats strong{font-size:12px}.preview-mini-stats>div:last-child{grid-column:auto}.preview-reco{margin-top:8px;padding:9px 10px;border-radius:12px}.preview-reco div{font-size:11px}.preview-reco p{font-size:10px;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.preview-floating-badge{display:none}
+  .home-check-cards{order:5;display:flex;overflow-x:auto;scroll-snap-type:x mandatory;gap:9px;width:100%;max-width:none;margin:2px 0 0;padding:2px 1px 8px;scrollbar-width:none}.home-check-cards::-webkit-scrollbar{display:none}.home-check-card{flex:0 0 82%;scroll-snap-align:center;grid-template-columns:38px 1fr 34px;gap:9px;padding:11px 12px;border-radius:16px;min-height:86px}.home-check-card .home-card-icon{width:38px;height:38px;border-radius:12px;font-size:17px}.home-check-card h3{font-size:17px;margin:2px 0 3px;max-width:none}.home-check-card p{font-size:11px;line-height:1.3;-webkit-line-clamp:2}.home-check-card .home-card-kicker{font-size:9px}.home-check-card .home-card-button{width:34px;height:34px;flex-basis:34px;font-size:18px;margin:0;align-self:center}
+  .home-blue-benefits{order:6;margin-top:0;justify-content:center;gap:10px;font-size:10px}.home-blue-benefits b{font-size:12px}
+}
+@media(max-width:420px){.quick-result-lead-form{grid-template-columns:1fr}.quick-result-lead-form button{grid-column:auto}.preview-dashboard-card{max-width:355px}.home-check-card{flex-basis:88%}}
+
+/* V17.1 - compact teaser insights in home preview */
+.preview-reco-title{display:flex;align-items:center;gap:8px;color:#163b79}
+.preview-insight-list{display:grid;gap:7px;margin-top:9px}
+.preview-insight-list>div{display:grid;grid-template-columns:auto 1fr;gap:7px;align-items:start}
+.preview-insight-list p{margin:0!important;display:grid;grid-template-columns:auto 1fr;gap:6px;align-items:baseline;min-width:0}
+.preview-insight-list strong{font-size:11px;color:#29466f;white-space:nowrap}
+.preview-insight-list small{font-size:10px;color:#70819c;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.insight-dot{font-size:10px;line-height:1.4}.insight-dot.orange{color:#f59e0b}.insight-dot.green{color:#16a36a}
+@media(max-width:650px){.preview-reco{padding:8px 9px}.preview-reco-title{font-size:10px}.preview-insight-list{gap:4px;margin-top:6px}.preview-insight-list>div{gap:5px}.preview-insight-list p{grid-template-columns:auto 1fr;gap:4px}.preview-insight-list strong{font-size:9px}.preview-insight-list small{font-size:8.5px}.insight-dot{font-size:8px}}
